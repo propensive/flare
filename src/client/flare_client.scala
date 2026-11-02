@@ -38,29 +38,26 @@ import soundness.*
 import backstops.silentBackstop
 import dysasymptotics.linearSize
 import interpreters.posixInterpreter
-import palettes.solarizedDarkGaugePalette
 import probates.cancelProbate
 import pyrocosm.Boards.show
-import pyrocosm.Tool
-import pyrocosm.{Block, Board, Inline, Status as Gauge}
-import tableStyles.thickTableStyle
-import textMetrics.uniformMetric
+import pyrocosm.standardRendering.given
+import pyrocosm.{ambient, Block, Board, Inline, Invoker, Status as Gauge, Tool}
 import threads.platformThreads
 
 // The exit statuses flare can terminate with, declared as objects (a `Status` must be an
 // `object`, not a `val` — soundness#1811) so that the precise union of an `execute` block's
 // result type documents them: `Status.Admissible` reifies the union, and the manpage's EXIT
 // STATUS section is generated from it.
+// `UsageError` and `Tool.NoCredential` are Pyrocosm's; a tool's own are numbered from 32, so that
+// none collides with the standard ones.
 object Violations extends Status(1, t"one or more error-severity violations were reported")
-object UsageError extends Status(2, t"the command line was not understood")
 object NoConfig extends Status(3, t"no .pyrocosm/flare/config.tel was found")
 object ConfigError extends Status(4, t"the configuration file could not be used")
 object ParseFailure extends Status(5, t"a source file could not be parsed")
 object NoRepository extends Status(6, t"the project is not in a git repository")
 object NotesFailed extends Status(7, t"the git notes could not be written or read")
-object NoCredential extends Status(8, t"no credential for the model could be found")
-object ModelFailed extends Status(9, t"the model could not be consulted")
-object AssessIncomplete extends Status(10, t"some candidates were not judged")
+object ModelFailed extends Status(32, t"the model could not be consulted")
+object AssessIncomplete extends Status(33, t"some candidates were not judged")
 
 // Flare's user interface, in one namespace: its subcommands and flags. The object exists so each
 // can carry its natural name without a package-level `val` shadowing a Soundness export of the
@@ -112,33 +109,11 @@ val Flare: Tool =
         t"rules in git notes so that the counts can be followed commit by commit.",
       web   = flare.Dashboard.web )
 
-// Every command body takes `Stdio`, `Environment` and `WorkingDirectory` as pure `using`
-// parameters; `execute` provides them through an `Invocation` whose derived capabilities are
-// tracked, so each arm seals them once with `unsafeAssumePure` — they outlive the command they
-// drive — before calling the body. The `execute` is here too, its block's parameters bound by
-// name: left to inference under the `cli` block's capture restriction, the invocation's root
-// is created at the wrong level.
-private inline def ambient[result <: Termination: scala.Precise]
-  ( inline body: (Stdio, Console, Environment, WorkingDirectory) ?=> result )
-  ( using Cli )
-  ( using result is Status.Admissible )
-:   Execution to result =
+// Plain output is the default for an agent or a workflow: no terminal reads the colours, and a
+// line per finding is what a log wants.
+private def terseByDefault(using Environment): Boolean = Invoker.detect.terse
 
-  execute:
-    (erased effectful: Effectful) ?=> (invocation: Invocation) ?=>
-      given Stdio = caps.unsafe.unsafeAssumePure(invocation.stdio)
-      given Console = caps.unsafe.unsafeAssumePure(summon[Console])
-      given Environment = caps.unsafe.unsafeAssumePure(invocation.environment)
-      given WorkingDirectory = caps.unsafe.unsafeAssumePure(invocation.workingDirectory)
-      body
-
-// Plain output is the default under CI: no terminal reads the colours, and a line per finding
-// is what a log wants.
-private def terseByDefault(using Environment): Boolean =
-  safely(Environment.githubActions[Text]) == t"true"
-
-private def width(using Environment): Int =
-  safely(Environment.columns[Text].s.toInt).lay(120)(_.min(160))
+private def width(using Environment): Int = Flare.columns
 
 // One grep-able line per finding.
 private def terse(root: Text, findings: List[Report.Finding])(using Stdio): Unit =
@@ -267,7 +242,7 @@ private def loaded(workspace: Workspace.Outcome)(using Stdio)
 private def check
   ( workspace: Workspace.Outcome, directory: Text, words: List[Text], terse: Boolean, tty: Boolean )
   ( using Stdio, Console, Environment, WorkingDirectory, Monitor )
-:   Exit | Violations.type | UsageError.type | NoConfig.type | ConfigError.type |
+:   Exit | Violations.type | Tool.UsageError.type | NoConfig.type | ConfigError.type |
   ParseFailure.type =
 
   loaded(workspace) match
@@ -277,7 +252,7 @@ private def check
     case config: Workspace.Config => select(config, words) match
       case (_, _, message: Text) =>
         Out.println(t"flare: $message")
-        UsageError
+        Tool.UsageError
 
       case (profile: Workspace.Profile, paths, _) =>
         val plugin = config.pluginConfig(profile)
@@ -317,10 +292,10 @@ private def check
           else Exit.Ok
 
       case _ =>
-        UsageError
+        Tool.UsageError
 
 private def options(workspace: Workspace.Outcome, words: List[Text])(using Stdio)
-:   Exit | UsageError.type | NoConfig.type | ConfigError.type =
+:   Exit | Tool.UsageError.type | NoConfig.type | ConfigError.type =
 
   loaded(workspace) match
     case NoConfig    => NoConfig
@@ -333,12 +308,12 @@ private def options(workspace: Workspace.Outcome, words: List[Text])(using Stdio
 
       case (_, _, message: Text) =>
         Out.println(t"flare: $message")
-        UsageError
+        Tool.UsageError
 
-      case _ => UsageError
+      case _ => Tool.UsageError
 
 private def rules(workspace: Workspace.Outcome, words: List[Text])(using Stdio)
-:   Exit | UsageError.type | NoConfig.type | ConfigError.type =
+:   Exit | Tool.UsageError.type | NoConfig.type | ConfigError.type =
 
   loaded(workspace) match
     case NoConfig    => NoConfig
@@ -371,15 +346,15 @@ private def rules(workspace: Workspace.Outcome, words: List[Text])(using Stdio)
 
       case (_, _, message: Text) =>
         Out.println(t"flare: $message")
-        UsageError
+        Tool.UsageError
 
-      case _ => UsageError
+      case _ => Tool.UsageError
 
 private def metrics
   ( workspace: Workspace.Outcome, words: List[Text], force: Boolean, dryRun: Boolean,
     show: Optional[Text], tty: Boolean )
   ( using Stdio, Console, Environment, WorkingDirectory, Monitor )
-:   Exit | UsageError.type | NoConfig.type | ConfigError.type | ParseFailure.type |
+:   Exit | Tool.UsageError.type | NoConfig.type | ConfigError.type | ParseFailure.type |
   NoRepository.type | NotesFailed.type =
 
   loaded(workspace) match
@@ -389,7 +364,7 @@ private def metrics
     case config: Workspace.Config => select(config, words) match
       case (_, _, message: Text) =>
         Out.println(t"flare: $message")
-        UsageError
+        Tool.UsageError
 
       case (profile: Workspace.Profile, _, _) =>
         val namespace = profile.notes.or(t"flare")
@@ -404,7 +379,7 @@ private def metrics
             Out.println(t"flare: $root is not inside a git repository, so nothing can be recorded")
             NoRepository
 
-      case _ => UsageError
+      case _ => Tool.UsageError
 
 private def showCensus(repository: Repository, namespace: Text, profile: Text, target: Text)
   ( using Stdio, WorkingDirectory )
@@ -454,13 +429,13 @@ private def measure
     val board = Board(t"flare metrics: ${profile.name}")
 
     def work(): (flare.Frontend.Result, List[(Text, List[(Text, Int)])]) =
-      val parsed = java.util.concurrent.atomic.AtomicInteger(0)
-      val counted = java.util.concurrent.atomic.AtomicInteger(0)
+      val parsed: Atomic[Int] = Atomic(0)
+      val counted: Atomic[Int] = Atomic(0)
 
       val result =
         flare.Frontend.run(files, profile.languages, t"parser"): (phase: String) =>
           if phase == "parser" then
-            val progress = Gauge.Reckoning(parsed.incrementAndGet().toLong, files.size.toLong)
+            val progress = Gauge.Reckoning(parsed.since(_ + 1).toLong, files.size.toLong)
             board.gauge(progress, t"Parsing")
 
       val perFile: List[(Text, List[(Text, Int)])] =
@@ -468,7 +443,7 @@ private def measure
           val report =
             Linter.check(pluginConfig, unit.path.s, unit.text.s, unit.tree, unit.source, features)
 
-          val progress = Gauge.Reckoning(counted.incrementAndGet().toLong, result.units.size.toLong)
+          val progress = Gauge.Reckoning(counted.since(_ + 1).toLong, result.units.size.toLong)
           board.gauge(progress, t"Counting")
 
           val relative =
@@ -573,8 +548,8 @@ private def assess
   ( workspace: Workspace.Outcome, directory: Text, words: List[Text], force: Boolean,
     dryRun: Boolean, show: Optional[Text], limit: Optional[Text], report: Boolean )
   ( using Stdio, Console, Environment, WorkingDirectory )
-:   Exit | UsageError.type | NoConfig.type | ConfigError.type | ParseFailure.type |
-  NoRepository.type | NotesFailed.type | NoCredential.type | ModelFailed.type |
+:   Exit | Tool.UsageError.type | NoConfig.type | ConfigError.type | ParseFailure.type |
+  NoRepository.type | NotesFailed.type | Tool.NoCredential.type | ModelFailed.type |
   AssessIncomplete.type =
 
   loaded(workspace) match
@@ -588,7 +563,7 @@ private def assess
       select(config, others) match
         case (_, _, message: Text) =>
           Out.println(t"flare: $message")
-          UsageError
+          Tool.UsageError
 
         case (profile: Workspace.Profile, _, _) =>
           val chosen: List[Text] = if named.nil then profile.assessed else named
@@ -604,7 +579,7 @@ private def assess
               ( t"flare: profile `${profile.name}` assesses nothing; name a rule, or add " +
                 t"`assess <rule>` to the profile" )
 
-            UsageError
+            Tool.UsageError
           else
             Repository.locate(config.root) match
               case repository: Repository =>
@@ -627,7 +602,7 @@ private def assess
 
                 NoRepository
 
-        case _ => UsageError
+        case _ => Tool.UsageError
 
 private def showAssessment(repository: Repository, rule: Workspace.Assessment, target: Text)
   ( using Stdio, WorkingDirectory )
@@ -661,7 +636,7 @@ private def showAssessment(repository: Repository, rule: Workspace.Assessment, t
 
 // What assessing one rule can end with.
 private type Assessed =
-  Exit | ConfigError.type | ParseFailure.type | NotesFailed.type | NoCredential.type |
+  Exit | ConfigError.type | ParseFailure.type | NotesFailed.type | Tool.NoCredential.type |
     ModelFailed.type | AssessIncomplete.type
 
 private def assessOne
@@ -727,7 +702,7 @@ private def assessOne
                   t"~/.config/pyrocosm/credentials.tel or set the conventional environment " +
                   t"variable" )
 
-              NoCredential
+              Tool.NoCredential
 
         case _ =>
           Out.println

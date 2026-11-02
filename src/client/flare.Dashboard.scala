@@ -37,7 +37,7 @@ import java.util.concurrent as juc
 import soundness.*
 import dysasymptotics.linearSize
 import pyrocosm.{Action, Activity, Block, Control, Event, Hints, Inline, Interface, Live, Panel}
-import pyrocosm.{Tone, Tool, hints}
+import pyrocosm.{Timing, Tone, Tool, WebService, hints}
 
 // The dashboard as the web front-end `Tool` serves from the daemon: launched once, for as long
 // as the daemon lives, when a config says `serve`, and stopped by `flare quit`. It is served
@@ -45,45 +45,16 @@ import pyrocosm.{Tone, Tool, hints}
 // own the hub reaches it by; a `port` in a config serves it on that port too. `flare serve`
 // remains the interactive way to serve it, from a terminal.
 object Dashboard:
-  // Where the dashboard on `port` is found: under the hub's origin for port 0, which the hub
-  // holds, and at the port itself otherwise.
-  def address(port: Int): Text =
-    if port == 0 then t"http://localhost:${pyrocosm.Hubs.port}/flare/"
-    else t"http://localhost:${port.toString.tt}/"
+  // Where the dashboard on `port` is found.
+  def address(port: Int): Text = Flare.address(port)
 
-  val web: Tool.Web = new Tool.Web:
-    def port: Int = 0
-
-    // The frontend holds the monitor and the error page, which outlive it; vouched pure so it
-    // can be stopped from another invocation.
-    @scala.caps.unsafe.untrackedCaptures
-    @volatile
-    private var frontend: Optional[pyrocosm.WebFrontend] = Unset
-
-    // Serves until `stop`. A ticker drives the dashboard a few times a second for as long as
-    // the front-end runs: it is what notices a project newly registered, runs a requested
-    // check, and reads a selected profile's census; nothing runs on the front-end's threads.
-    def serve(port: Int)(using Monitor, Probate): Unit =
-      import webserverErrorPages.minimalErrorPage
-
-      val dashboard = Dashboard()
-      val serving: juc.atomic.AtomicBoolean = juc.atomic.AtomicBoolean(true)
-
-      val running: pyrocosm.WebFrontend =
-        scala.caps.unsafe.unsafeAssumePure(pyrocosm.WebFrontend(port))
-
-      frontend = running
-
-      try
-        async:
-          while serving.get do
-            dashboard.tick()
-            snooze(0.25*Second)
-
-        running.run(dashboard.interface)(dashboard.handle)
-      finally serving.set(false)
-
-    def stop(): Unit = frontend.let(_.stop())
+  // Served until `stop`, as every tool's web front-end is (`WebService`): the ticker drives the
+  // dashboard a few times a second for as long as the front-end runs, which is what notices a
+  // project newly registered, runs a requested check, and reads a selected profile's census;
+  // nothing runs on the front-end's threads.
+  val web: Tool.Web = WebService(): () =>
+    val dashboard = Dashboard()
+    WebService.Session(dashboard.interface, dashboard.handle, () => dashboard.tick())
 
   // The projects the daemon has seen, by root: every invocation registers the configuration it
   // loads, so the dashboard offers each project's profiles whichever shell flare was run from,
@@ -94,9 +65,9 @@ object Dashboard:
 
   // Bumped whenever a census may have been recorded — by `flare metrics`, in any shell — so
   // that a dashboard showing that profile reads it again.
-  private val edition0: juc.atomic.AtomicLong = juc.atomic.AtomicLong(0L)
-  def edition: Long = edition0.get
-  def measured(): Unit = edition0.incrementAndGet()
+  private val edition0: Atomic[Long] = Atomic(0L)
+  def edition: Long = edition0()
+  def measured(): Unit = edition0.since(_ + 1L)
 
   def known: List[Workspace.Config] =
     val iterator = projects.values.nn.iterator.nn
@@ -380,27 +351,9 @@ final class Dashboard():
           Repository.locate(config.root).lay(none): (repository: Repository) =>
             Census.history(repository, profile.notes.or(t"flare"), profile.name, 200)
 
-  // When something happened: relative to now within the hour, and as a time of day beyond it.
-  private def when(millis: Long): Text =
-    val minutes: Long = (java.lang.System.currentTimeMillis - millis)/60000L
-
-    if minutes < 1L then t"just now"
-    else if minutes == 1L then t"1 minute ago"
-    else if minutes < 60L then t"${minutes.show} minutes ago"
-    else
-      val instant = java.time.Instant.ofEpochMilli(millis).nn
-      val zoned = instant.atZone(java.time.ZoneId.systemDefault).nn
-      java.time.format.DateTimeFormatter.ofPattern("HH:mm").nn.format(zoned).nn.tt
-
-  // When a commit was made: as `when` within the day, and as a date beyond it.
-  private def dated(millis: Long): Text =
-    val now = java.time.ZonedDateTime.now(java.time.ZoneId.systemDefault).nn
-    val zoned = java.time.Instant.ofEpochMilli(millis).nn.atZone(java.time.ZoneId.systemDefault).nn
-
-    if zoned.toLocalDate == now.toLocalDate then when(millis)
-    else
-      val pattern: String = if zoned.getYear == now.getYear then "d MMM" else "d MMM yyyy"
-      java.time.format.DateTimeFormatter.ofPattern(pattern).nn.format(zoned).nn.tt
+  // When something happened, as every tool says it (`Timing.ago`).
+  private def when(millis: Long): Text = Timing.ago(Instant.of[Unix](millis))
+  private def dated(millis: Long): Text = when(millis)
 
   private def marked(chosen: Boolean, label: Text): List[Inline] =
     if chosen then List(Inline.Toned(Tone.Accent, List(Inline.Emphasis(Inline.text(label)))))

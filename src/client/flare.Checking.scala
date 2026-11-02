@@ -79,14 +79,14 @@ object Checking:
 
     val enabled = Rules.enabled(pluginConfig)
     val features = profile.languages.map(_.s).stdlib
-    val parsed = java.util.concurrent.atomic.AtomicInteger(0)
-    val checked = java.util.concurrent.atomic.AtomicInteger(0)
+    val parsed: Atomic[Int] = Atomic(0)
+    val checked: Atomic[Int] = Atomic(0)
 
     val result =
       flare.Frontend.run(files, profile.languages, Rules.lastPhase(enabled).tt): (phase: String) =>
         if phase == "parser" then
           sink.gauge
-            ( Gauge.Reckoning(parsed.incrementAndGet().toLong, files.size.toLong), t"Parsing" )
+            ( Gauge.Reckoning(parsed.since(_ + 1).toLong, files.size.toLong), t"Parsing" )
 
     def check(unit: flare.Frontend.Parsed): List[Report.Finding] =
       if sink.aborted then Nil else
@@ -107,7 +107,7 @@ object Checking:
         found.each: (finding: Report.Finding) => sink.found(finding, unit.text)
 
         val total = result.units.size.toLong
-        sink.gauge(Gauge.Reckoning(checked.incrementAndGet().toLong, total), t"Checking")
+        sink.gauge(Gauge.Reckoning(checked.since(_ + 1).toLong, total), t"Checking")
 
         found
 

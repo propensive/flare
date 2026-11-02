@@ -185,6 +185,7 @@ object settings:
     mvn"dev.propensive:pyrocosm-terminal:$pyrocosm",
     mvn"dev.propensive:pyrocosm-compiler:$pyrocosm",
     mvn"dev.propensive:pyrocosm-web:$pyrocosm",          // the dashboard `flare serve` serves
+    mvn"dev.propensive:pyrocosm-notes:$pyrocosm",        // the census, in git notes
     mvn"dev.propensive:pyrocosm-cli:$pyrocosm")
 
   // probably-events carries `probably.Streamer`, the BinTEL event stream fume drives a suite
@@ -340,6 +341,7 @@ object flare extends Project:
   object test extends PlainComponent(plugin):
     def mvnDeps = Task:
       settings.testDeps(deps.soundness()) :+ mvn"org.scala-lang:scala3-compiler_3:${settings.scalaVersion}"
+        :+ mvn"dev.propensive:pyrocosm-harness:${deps.pyrocosm()}"
     def scalacPluginMvnDeps = Task(Seq(mvn"dev.propensive:beneficence-plugin:${deps.soundness()}"))
     def finalMainClass = "flare.runTests"
     override def assemblyRules = super.assemblyRules ++ Seq(

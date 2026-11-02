@@ -1,0 +1,34 @@
+tel 1.0
+
+# Flair checks itself: every source, against Consequent Style, with the licence header every
+# file begins with. The rules below are measured by `flair metrics`; `cast` is enforced too.
+
+rule cast
+  invokes asInstanceOf
+  invokes isInstanceOf
+  message  Casts bypass the type checker; prefer a pattern match
+
+rule imperative
+  uses var
+  uses while
+  uses null
+  uses return
+
+profile default
+  source src/**/*.scala
+  language implicitConversions
+  language experimental.modularity
+  language experimental.dependent
+  language experimental.relaxedLambdaSyntax
+  language experimental.genericNumberLiterals
+  language experimental.into
+  language experimental.erasedDefinitions
+  language experimental.saferExceptions
+  language experimental.strictEqualityPatternMatching
+  language experimental.subCases
+  language experimental.multiSpreads
+  language experimental.captureChecking
+  style consequent
+    header etc/header.txt
+    columns 100
+  enforce cast

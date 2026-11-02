@@ -45,6 +45,8 @@ import dotty.tools.io.AbstractFile
 
 import soundness.*
 
+import pyrocosm.Runtimes
+
 // One run of the Scala compiler over a profile's sources, stopped after the last phase any
 // enabled rule needs — the parser, today — so that a lint costs a parse and not a compile, and
 // needs no classpath. What comes back is each unit's untyped tree, which is what the rules read,
@@ -61,34 +63,7 @@ object Frontend:
   // shebang), so it is symlinked to a `.jar` path and the symlink substituted. Outside the
   // launcher, `java.class.path` is what there is.
   lazy val classpath: String =
-    val entries = java.util.ArrayList[String]()
-
-    val executable: String | Null = java.lang.System.getProperty("ethereal.script")
-
-    val executablePath: String | Null =
-      if executable == null then null else java.io.File(executable).getCanonicalPath
-
-    if executablePath != null then
-      try
-        val directory = java.nio.file.Files.createTempDirectory("flare").nn
-        val link = directory.resolve("flare.jar").nn
-        java.nio.file.Files.createSymbolicLink(link, java.nio.file.Paths.get(executablePath))
-        entries.add(link.toString)
-      catch case _: Throwable => ()
-
-    Thread.currentThread.nn.getContextClassLoader match
-      case loader: java.net.URLClassLoader =>
-        loader.getURLs.nn.foreach: url =>
-          if url != null then
-            val path = java.io.File(url.toURI).getCanonicalPath.nn
-            if path != executablePath then entries.add(path)
-
-      case _ => ()
-
-    val system: String | Null = java.lang.System.getProperty("java.class.path")
-    if system != null && !system.isEmpty then entries.add(system)
-
-    String.join(java.io.File.pathSeparator, entries).nn
+    Runtimes.classpath().join(java.io.File.pathSeparator.nn.tt).s
 
   // `started` is told each phase a unit begins, so a caller can show progress.
   def run(files: List[Text], languages: List[Text], stopAfter: Text)(started: String => Unit)
