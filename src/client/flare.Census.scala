@@ -35,10 +35,7 @@ package flare
 import soundness.*
 
 import codepages.utf8Codepage
-import environments.javaBaseEnvironment
-import gitBackends.commandlineGit
-import gitCommands.searchpathGitCommand
-import logging.silentLogging
+import pyrocosm.{Fingerprint, Notes}
 
 // The census, and where it goes. `flare metrics` counts every project rule's matches and every
 // gate's uses across a profile's sources, and records the result in git notes so that the counts
@@ -173,148 +170,70 @@ object Repository:
   case class Entry(hash: Text, time: Long)
 
   // The repository containing `root`, or `Unset` when it is not inside a git work tree.
-  def locate(root: Text)(using WorkingDirectory): Optional[Repository] =
-    safely:
-      val toplevel = sh"git -C $root rev-parse --show-toplevel".exec[Text]().trim
-      val gitDir   = sh"git -C $root rev-parse --absolute-git-dir".exec[Text]().trim
-      if toplevel == t"" || gitDir == t"" then Unset else Repository(toplevel, gitDir)
+  def locate(root: Text): Optional[Repository] = Notes.locate(root).let(Repository(_))
 
-// The git repository a project root sits in, and the operations the census needs of it. Every
-// call shells out to `git` — through octogenarian for notes, and directly for the two things it
-// has no word for (`write-tree` under a temporary index, and reading a notes ref's tree).
-class Repository(val toplevel: Text, val gitDir: Text):
-  // The repository is opened for each operation that goes through octogenarian: a `Git.Repo` is
-  // the form a path is opened in, lending a handle for the block, rather than a value to keep.
-  private val gitPath: Path on Linux = unsafely(gitDir.as[Path on Linux])
+  // Flare's notes live under `refs/notes/pyrocosm/`, as every Pyrocosm tool's do, one kind per
+  // namespace: the default census namespace `flare` is the kind `flare-census`, a profile's own
+  // is itself, and a rule's `flare-assess/<rule>` is `flare-assess-<rule>`. Each was kept at
+  // `refs/notes/<namespace>` before, which is still read, so that a census recorded by an
+  // earlier flare is not lost.
+  def kind(namespace: Text): Text =
+    if namespace == t"flare" then t"flare-census" else namespace.sub(t"/", t"-")
 
-  def head()(using WorkingDirectory): Optional[Text] =
-    safely(sh"git -C $toplevel rev-parse --verify HEAD".exec[Text]().trim).let: (text: Text) =>
-      if text.length == 40 then text else Unset
+  def legacy(namespace: Text): Text = t"refs/notes/$namespace"
+
+// The git repository a project root sits in, and the operations the census needs of it, each
+// Pyrocosm's `Notes`.
+class Repository(notes: Notes):
+  import Repository.{kind, legacy}
+
+  private def fingerprint(hash: Text): Fingerprint = Fingerprint.unsafe(hash)
+
+  def head(): Optional[Text] = safely(notes.head()).or(Unset).let(_.text)
 
   // Whether any tracked file differs from HEAD: a measurement of a dirty tree is still a
   // measurement, but the pointer note should say so.
-  def dirty()(using WorkingDirectory): Boolean =
-    safely(sh"git -C $toplevel status --porcelain --untracked-files=no".exec[Text]().trim)
-    . lay(false)(_ != t"")
+  def dirty(): Boolean = safely(notes.dirty()).or(false)
 
   // The tree object of exactly `files`, written under a throwaway index so the real index and the
-  // work tree are untouched. The index sorts its entries, so the hash does not depend on the
-  // order the files arrive in.
-  def inputTree(files: List[Text])(using WorkingDirectory): Optional[Text] =
-    safely:
-      val index = java.io.File.createTempFile("flare-index", ".idx").nn
-      index.delete()
-      val indexPath: Text = index.getAbsolutePath.nn.tt
+  // work tree are untouched.
+  def inputTree(files: List[Text]): Optional[Text] = safely(notes.tree(files)).let(_.text)
 
-      try
-        val added: Exit =
-          sh"env GIT_INDEX_FILE=$indexPath git -C $toplevel update-index --add -- $files"
-          . exec[Exit]()
+  // The latest `limit` commits behind HEAD, newest first, with their commit times.
+  def log(limit: Int): List[Repository.Entry] =
+    safely(notes.log(t"HEAD", limit)).or(Nil).map: (commit, time) =>
+      Repository.Entry(commit.text, time)
 
-        val tree: Text =
-          sh"env GIT_INDEX_FILE=$indexPath git -C $toplevel write-tree".exec[Text]().trim
+  // The objects annotated under the namespace, where it is now and where it was.
+  def noted(namespace: Text): List[Text] =
+    val current: List[Text] = safely(notes.noted(kind(namespace))).or(Nil).map(_.text)
+    val earlier: List[Text] = safely(notes.notedAt(legacy(namespace))).or(Nil).map(_.text)
+    List.from((current.stdlib ++ earlier.stdlib).distinct)
 
-        if added == Exit.Ok && tree.length == 40 then tree else Unset
-      finally index.delete()
+  def resolve(refspec: Text): Optional[Text] = safely(notes.resolve(refspec)).or(Unset).let(_.text)
+  def objectType(hash: Text): Optional[Text] = safely(notes.objectType(hash)).or(Unset)
 
-  // The latest `limit` commits behind HEAD, newest first, with their commit times. The format
-  // is one word, since the command's words are split on spaces before git sees them.
-  def log(limit: Int)(using WorkingDirectory): List[Repository.Entry] =
-    val count: Text = limit.show
+  // A note's body, if the object has one under the namespace: through the notes ref's own tree
+  // where the annotated object has been pruned, and at the namespace's earlier ref otherwise.
+  def noteData(namespace: Text, hash: Text): Optional[Data] =
+    safely(notes.note(kind(namespace), fingerprint(hash))).or(Unset)
+    . or(safely(notes.noteAt(legacy(namespace), fingerprint(hash))).or(Unset))
 
-    safely(sh"git -C $toplevel log --format=%H:%ct -n $count".exec[Text]())
-    . lay(Nil: List[Repository.Entry]): (text: Text) =>
-        text.cut(t"\n")
-        . bind[List[Repository.Entry], Repository.Entry, List[Repository.Entry]]: (line: Text) =>
-            line.cut(t":") match
-              case hash :: time :: _ if hash.length == 40 =>
-                safely(time.as[Long]).lay(Nil: List[Repository.Entry]): (seconds: Long) =>
-                  List(Repository.Entry(hash, seconds))
+  def note(namespace: Text, hash: Text): Optional[Text] = noteData(namespace, hash).let(_.utf8)
+  def storedNote(namespace: Text, hash: Text): Optional[Text] = note(namespace, hash)
 
-              case _ => Nil
+  def addNote(namespace: Text, hash: Text, body: Text, force: Boolean): Boolean =
+    if !force && note(namespace, hash).present then false
+    else safely(notes.write(kind(namespace), fingerprint(hash), body.sysData)).present
 
-  // The objects annotated under the namespace.
-  def noted(namespace: Text)(using WorkingDirectory): List[Text] =
-    safely(sh"git -C $toplevel notes --ref $namespace list".exec[Text]())
-    . lay(Nil: List[Text]): (text: Text) =>
-        text.cut(t"\n").bind[List[Text], Text, List[Text]]: (line: Text) =>
-          line.cut(t" ") match
-            case _ :: annotated :: _ => List(annotated)
-            case _                   => Nil
-
-  def resolve(refspec: Text)(using WorkingDirectory): Optional[Text] =
-    safely(sh"git -C $toplevel rev-parse --verify --end-of-options $refspec".exec[Text]().trim)
-    . let: (text: Text) => if text.length == 40 then text else Unset
-
-  def objectType(hash: Text)(using WorkingDirectory): Optional[Text] =
-    safely(sh"git -C $toplevel cat-file -t $hash".exec[Text]().trim)
-
-  private def ref(namespace: Text): Path on Git.Refs = unsafely(Git.Refs.notes(namespace))
-
-  // octogenarian validates a notes namespace as one ref segment, so a hierarchical namespace
-  // (`flare-assess/plumbing`) goes to `git` directly, as the other operations it has no word
-  // for do.
-  private def nested(namespace: Text): Boolean = namespace.contains(t"/")
-
-  // A note, if the object has one under the namespace.
-  def note(namespace: Text, hash: Text)(using WorkingDirectory): Optional[Text] =
-    if nested(namespace)
-    then safely(sh"git -C $toplevel notes --ref $namespace show $hash".exec[Text]())
-    else
-      safely(gitPath.open[Git.Repo]() { repo ?=> repo.note(Git.Hash(hash), ref(namespace)).value })
-
-  // A note read through the notes ref's own tree, which is where it survives the pruning of a
-  // dangling target: `git notes` fans out its tree past a size, so both layouts are tried.
-  def storedNote(namespace: Text, hash: Text)(using WorkingDirectory): Optional[Text] =
-    note(namespace, hash).or:
-      val flat   = t"refs/notes/$namespace:$hash"
-      val fanned = t"refs/notes/$namespace:${hash.keep(2)}/${hash.skip(2)}"
-      safely(sh"git -C $toplevel cat-file -p $flat".exec[Text]())
-      . or(safely(sh"git -C $toplevel cat-file -p $fanned".exec[Text]()))
-
-  def addNote(namespace: Text, hash: Text, body: Text, force: Boolean)(using WorkingDirectory)
-  :   Boolean =
-
-    if nested(namespace) then
-      val flag: Text = if force then t"-f" else t"--no-force"
-      safely(sh"git -C $toplevel notes --ref $namespace add $flag -m $body $hash".exec[Exit]())
-      . lay(false)(_ == Exit.Ok)
-    else
-      safely:
-        gitPath.open[Git.Repo](Read & Write): repo ?=>
-          repo.addNote(Git.Hash(hash), body, repo.ref(ref(namespace)), ref(namespace), force)
-
-      . present
-
-  def appendNote(namespace: Text, hash: Text, body: Text)(using WorkingDirectory): Boolean =
-    if nested(namespace) then
-      safely(sh"git -C $toplevel notes --ref $namespace append -m $body $hash".exec[Exit]())
-      . lay(false)(_ == Exit.Ok)
-    else
-      safely:
-        gitPath.open[Git.Repo](Read & Write): repo ?=>
-          repo.appendNote(Git.Hash(hash), body, repo.ref(ref(namespace)), ref(namespace))
-
-      . present
+  def appendNote(namespace: Text, hash: Text, body: Text): Boolean =
+    safely(notes.append(kind(namespace), fingerprint(hash), body)).present
 
   // Writes `data` into the object store as a blob and returns its hash: how a definition's
-  // normalised text becomes its digest, and how a binary note body is staged.
-  def writeBlob(data: Data)(using WorkingDirectory): Optional[Text] =
-    safely:
-      val job = sh"git -C $toplevel hash-object -w --stdin".fork[Text]()
-      job.stdin(Stream(data))
-      val hash: Text = job.await().trim
-      if hash.length == 40 then hash else Unset
+  // normalised text becomes its digest.
+  def writeBlob(data: Data): Optional[Text] = safely(notes.blob(data)).or(Unset).let(_.text)
+  def writeBlob(text: Text): Optional[Text] = writeBlob(text.sysData)
 
-  def writeBlob(text: Text)(using WorkingDirectory): Optional[Text] = writeBlob(text.bytestream)
-
-  // A note whose body is a blob already in the store: git's `-C` reuses the object, so a
-  // binary body (BinTEL) is never passed through a command line or a text message.
-  def addBinaryNote(namespace: Text, target: Text, data: Data)(using WorkingDirectory): Boolean =
-    writeBlob(data).lay(false): (blob: Text) =>
-      safely(sh"git -C $toplevel notes --ref $namespace add -f -C $blob $target".exec[Exit]())
-      . lay(false)(_ == Exit.Ok)
-
-  // A note's body as bytes, for a binary note.
-  def noteData(namespace: Text, hash: Text)(using WorkingDirectory): Optional[Data] =
-    safely(sh"git -C $toplevel notes --ref $namespace show $hash".exec[Data]())
+  // A note whose body is any bytes (BinTEL), which `Notes` stages as a blob.
+  def addBinaryNote(namespace: Text, target: Text, data: Data): Boolean =
+    safely(notes.write(kind(namespace), fingerprint(target), data)).present

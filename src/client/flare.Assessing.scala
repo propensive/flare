@@ -38,6 +38,7 @@ import soundness.*
 import alphabets.hexLowerCase
 import dysasymptotics.linearSize
 import providers.javaBaseProvider
+import pyrocosm.Filing
 
 // One assessment, as `flare assess` runs it: the compiler over a profile's files, the candidate
 // extractor over each unit, then — for every definition without a valid judgement already in
@@ -217,8 +218,7 @@ object Assessing:
     val admit = filters(rule)
     val result = flare.Frontend.run(files, profile.languages, t"parser"): (phase: String) => ()
 
-    def relative(path: Text): Text =
-      if path.starts(t"${config.root}/") then path.skip(config.root.length + 1) else path
+    def relative(path: Text): Text = Filing.relative(config.root, path)
 
     // Every candidate in every unit, its path made root-relative so a locus is portable.
     val all: List[Candidates.Candidate] =

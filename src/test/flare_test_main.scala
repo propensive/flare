@@ -32,43 +32,9 @@
                                                                                                   */
 package flare
 
-import soundness.*
-import probably.TestEvent
+import pyrocosm.Harness
 
-// Flare's own suite, run WITHOUT fume: since Soundness 0.65.0 a `Suite` has no `main` (the host —
-// normally fume — drives it through `invoke`), so this is the plain-`java` entry point `make
-// test-plain` and CI use, printing one line per completed test and exiting with the suite's
-// status (0 = passed, 1 = failures, 2 = the suite threw). `fume run` remains the full experience.
+// Flare's own suite, run WITHOUT fume, through the harness every tool's is (see
+// `pyrocosm.Harness`): `make test-plain` and CI use it; `fume run` remains the full experience.
 @main
-def runTests(): Unit =
-  val tally = Tally()
-  val out = java.lang.System.out.nn
-
-  val status = Tests.invoke(t"", event => event match
-    case TestEvent.TestCompleted(test, _, _, outcome, _, _) =>
-      tally.record(outcome.outcome == t"pass" || outcome.outcome == t"aspire-pass")
-      out.println(t"[${outcome.outcome}] ${test.path.join(t" / ")}".s)
-
-    case TestEvent.DetailMessage(_, message) =>
-      out.println(t"    $message".s)
-
-    case TestEvent.DetailCompare(_, expected, found, _) =>
-      out.println(t"    expected: $expected".s)
-      out.println(t"    found:    $found".s)
-
-    case TestEvent.RunTerminated(error, _, _) =>
-      out.println(t"suite threw: ${error.components.map(_.message).join(t"; ")}".s)
-
-    case _ => ())
-
-  out.println(t"${tally.passed} passed, ${tally.failed} failed".s)
-  java.lang.System.exit(status)
-
-// Counts outcomes for the summary line. A class rather than local `var`s so the event sink,
-// which must be a pure `TestEvent -> Unit`, captures nothing it may not.
-private final class Tally:
-  private var passes: Int = 0
-  private var failures: Int = 0
-  def passed: Int = passes
-  def failed: Int = failures
-  def record(pass: Boolean): Unit = if pass then passes += 1 else failures += 1
+def runTests(): Unit = Harness.main(scala.Array(), Tests)

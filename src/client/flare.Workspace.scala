@@ -34,6 +34,7 @@ package flare
 
 import soundness.*
 import dysasymptotics.linearSize
+import pyrocosm.Tool
 
 // The per-project configuration: a `.pyrocosm/flare/config.tel` file in the invocation's working
 // directory or the nearest ancestor holding one — resolved upwards exactly like `.git` (and exactly
@@ -268,16 +269,14 @@ object Workspace:
   // The nearest `.pyrocosm/flare/config.tel` at or above `directory` is what `Tool` finds, exactly
   // as it does for every Pyrocosm tool.
   def load(directory: Text): Outcome =
-    Flare.repoFile(directory).lay(Outcome.Missing): file =>
-      val unreadable = Outcome.Invalid(file.encode, List(t"the file could not be read as TEL"))
+    val project: Tool.Project = Flare.project(directory)
 
-      parse(file).lay(unreadable): tel =>
-        val root: Text = file.parent.let(_.parent).let(_.parent).let(_.encode).or(directory)
-        read(file.encode, root, tel)
+    project.file.lay(Outcome.Missing): file =>
+      val unreadable = Outcome.Invalid(file.encode, List(t"the file could not be read as TEL"))
+      parse(file).lay(unreadable): tel => read(file.encode, project.root.encode, tel)
 
   // The atoms of every child compound with this keyword, one per occurrence.
-  private def atoms(node: Tel, keyword: Text): List[Text] =
-    node.fields(keyword).to[List].map(_.primaryAtom).filter(_ != t"")
+  private def atoms(node: Tel, keyword: Text): List[Text] = Tool.atoms(node, keyword)
 
   // A compound's atoms joined by single spaces: a `message` or a `matches` pattern may hold
   // several words.

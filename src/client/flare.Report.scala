@@ -37,6 +37,7 @@ package flare
 import soundness.{Language as _, *}
 import dysasymptotics.linearSize
 import palettes.solarizedDarkGaugePalette
+import pyrocosm.Filing
 import pyrocosm.{Block, Inline, Language, TerminalRenderer, Tone, modelLines}
 import tableStyles.thickTableStyle
 import textMetrics.uniformMetric
@@ -49,8 +50,7 @@ object Report:
 
   // `path` relative to the project root, for the report; the full path is noise the reader
   // already knows.
-  def relative(root: Text, path: Text): Text =
-    if path.starts(t"$root/") then path.skip(root.length + 1) else path
+  def relative(root: Text, path: Text): Text = Filing.relative(root, path)
 
   def rich(root: Text, findings: List[Finding], texts: Map[Text, Text], files: Int, width: Int)
     ( using Stdio )
