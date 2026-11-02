@@ -63,7 +63,7 @@ object Frontend:
   // shebang), so it is symlinked to a `.jar` path and the symlink substituted. Outside the
   // launcher, `java.class.path` is what there is.
   lazy val classpath: String =
-    Runtimes.classpath().join(java.io.File.pathSeparator.nn.tt).s
+    Runtimes.compilable().join(java.io.File.pathSeparator.nn.tt).s
 
   // `started` is told each phase a unit begins, so a caller can show progress.
   def run(files: List[Text], languages: List[Text], stopAfter: Text)(started: String => Unit)
