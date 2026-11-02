@@ -76,7 +76,6 @@ object ui:
       ( "options", "print the -P:flare: options equivalent to a profile, for the compiler plugin" )
 
   val Rules = Subcommand("rules", "list the rules a profile checks")
-  val Serve = Subcommand("serve", "serve the dashboard on the web until Ctrl+C")
 
   val Assess =
     Subcommand
@@ -101,7 +100,6 @@ object ui:
   // The port `flare serve` listens on; `--port`, the `flare.port` property, `FLARE_PORT` and
   // `port` in either config file all reach it — and `Tool` reads the same keyword for the
   // front-end a config's `serve` launches.
-  val Port = Setting[Text](t"port", t"the port on which `flare serve` serves the dashboard")
 
 // Flare as a Pyrocosm tool: `about`, `install`, `quit` and `--version` come from `Tool`, as does
 // the search for `.pyrocosm/flare/config.tel`, and the dashboard a config's `serve` launches.
@@ -221,44 +219,6 @@ private def dispatch()
   val tty: Boolean = summon[Resident].cliInput == ethereal.Terminus.Terminal
 
   arguments match
-    // `flare serve [--port]` — serve the dashboard: every known project's profiles, a
-    // check of any of them at the press of a button, and the census recorded for it.
-    case ui.Serve() :: _ =>
-      val port: Int = ui.Port() match
-        case text: Text => safely(text.as[Int]).or(flare.Dashboard.web.port)
-        case _          => flare.Dashboard.web.port
-
-      execute:
-        given Stdio = summon[Invocation].stdio
-        val stdio: Stdio = summon[Stdio]
-
-        val aborted: java.util.concurrent.atomic.AtomicBoolean =
-          java.util.concurrent.atomic.AtomicBoolean(false)
-
-        trap:
-          case Signal(Interrupt.Int, _, _, _) =>
-            aborted.set(true)
-            SignalResponse.Accept
-
-        async(flare.Dashboard.web.serve(port))
-        val address = flare.Dashboard.address(port)
-        Out.println(t"flare: serving the dashboard at $address (Ctrl+C to stop)")
-
-        // On a terminal the launcher forwards Ctrl+C as a byte rather than a signal, so the
-        // input is read for it here.
-        def loop(): Unit =
-          if tty then
-            while stdio.in.available() > 0 do if stdio.in.read() == 3 then aborted.set(true)
-
-          if !aborted.get then
-            snooze(0.25*Second)
-            loop()
-
-        loop()
-        flare.Dashboard.web.stop()
-        Out.println(t"flare: the dashboard has stopped")
-        Exit.Ok
-
     case ui.Options() :: rest =>
       ambient(options(workspace, words(rest)))
 
