@@ -39,6 +39,15 @@ import dotty.tools.dotc.util.SourceFile
 
 case class ExportInfo(names: Set[String], firstLine: Int)
 
+// One name an export surface puts into the umbrella package: the name as the
+// umbrella sees it (the rename, for `x as y`), the `package <name>:` blocks it
+// sits inside (`Nil` for the umbrella package itself), and the offset of the
+// name in the source.
+final case class Exported(name: String, scope: List[String], offset: Int):
+  // The name qualified by its blocks, which is what must be unique: blocks of
+  // the same name from different surfaces merge into one package.
+  def qualified: String = (scope :+ name).mkString(".")
+
 object UmbrellaExports:
   // Collect the simple leaf names re-exported by every top-level `export`
   // statement in the file (including those nested inside `package x:` blocks),
@@ -73,3 +82,36 @@ object UmbrellaExports:
     visit(tree)
 
     ExportInfo(names.to(Set), if firstLine < 0 then packageLine else firstLine)
+
+  // Every name the surface exports, with the `package <name>:` blocks it sits
+  // in. The wildcard and `given` selectors name nothing, and `x as _` hides
+  // `x` rather than exporting it.
+  def exported(tree: untpd.Tree): List[Exported] =
+    val out = mutable.ListBuffer[Exported]()
+
+    def record(exp: untpd.Export, scope: List[String]): Unit =
+      exp.selectors.foreach: selector =>
+        val name = selector.rename.toString
+
+        if !selector.isWildcard && name.nonEmpty && name != "_" then
+          val named  = if selector.renamed.isEmpty then selector.imported else selector.renamed
+          val offset = if named.span.exists then named.span.start else -1
+          out += Exported(name, scope, offset)
+
+    // The outermost package is the umbrella; each block nested in it adds a
+    // segment to the scope.
+    def visit(t: untpd.Tree, scope: List[String], outermost: Boolean): Unit = t match
+      case pkg: untpd.PackageDef =>
+        val inner = if outermost then scope else scope ++ segments(pkg.pid)
+        pkg.stats.foreach(visit(_, inner, false))
+
+      case exp: untpd.Export => record(exp, scope)
+      case _                 => ()
+
+    visit(tree, Nil, true)
+    out.toList
+
+  private def segments(tree: untpd.Tree): List[String] = tree match
+    case untpd.Ident(name)          => List(name.toString)
+    case untpd.Select(prefix, name) => segments(prefix) :+ name.toString
+    case _                          => Nil

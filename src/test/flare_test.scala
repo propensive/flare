@@ -108,6 +108,43 @@ object Tests extends Suite(m"Flare Tests"):
   // A project with an umbrella re-export package, for the L4 and L5 tests.
   val umbrella: Config = config.copy(umbrella = Some("umbrella"))
 
+  // A path the umbrella rules recognise as component `delta`'s export surface.
+  val surfacePath: String = "/project/lib/delta/src/core/umbrella_delta_core.scala"
+
+  // The hits of one project rule over an export surface (or, with `path`, any
+  // other file), enforced alone.
+  def surfaceRules(definition: Definition, body: String, path: String = surfacePath)
+  :   List[Violation] =
+
+    val enforcing =
+      umbrella.copy(rules = List(definition), enforced = Map(definition.name -> None))
+
+    Checker.check(path, Some("umbrella"), stub(body), config = enforcing).toList
+    . filter(_.rule == definition.name)
+
+  // The rule Soundness defines for compound names in its umbrella.
+  val compound: Definition = rule("compound", "exports" -> "/^[A-Z].*[a-z0-9][A-Z]/")
+
+  // A project tree of export surfaces, one per `(component, body)`, in a fresh
+  // temporary directory; returns each surface's path, in order.
+  def project(surfaces: (String, String)*): List[String] =
+    val root = java.nio.file.Files.createTempDirectory("flare-umbrella").nn
+
+    surfaces.to(List).map: (component, body) =>
+      val directory = root.resolve(s"lib/$component/src/core").nn
+      java.nio.file.Files.createDirectories(directory)
+      val file = directory.resolve(s"umbrella_${component}_core.scala").nn
+      java.nio.file.Files.writeString(file, stub(body))
+      file.toString
+
+  // The L6 messages for one surface of a project tree, as the linter (which
+  // reads the other surfaces) reports them.
+  def uniqueness(path: String): List[String] =
+    val text   = String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(path)))
+    val parsed = Parsing.parse(path, text, features)
+    val report = Linter.check(umbrella, path, text, parsed.tree, parsed.source, features)
+    report.violations.map(_(0)).filter(_.rule == "L6").map(_.message)
+
   def stub(body: String): String =
     val builder = new StringBuilder
     builder.append("/*\n")
@@ -2060,6 +2097,124 @@ object Tests extends Suite(m"Flare Tests"):
             config = config.copy(header = None)).toList.map(_.rule)
 
       . assert: r => !r.exists(Set("F1", "F2", "F3"))
+
+    suite(m"Umbrella names: exports and L6"):
+      test(m"The names a surface exports carry their package blocks"):
+        UmbrellaExports.exported
+          ( parse
+              ( "export delta.{Json, Cell as TableCell, Hidden as _, *}\n\n" +
+                "package strategies:\n  export delta.strategies.strictMode\n" ).tree )
+
+        . map(_.qualified)
+
+      . assert(_ == List("Json", "TableCell", "strategies.strictMode"))
+
+      test(m"exports matches a compound name in an export surface"):
+        surfaceRules(compound, "export delta.{Table, TableCell, cell, tableCell}\n")
+        . map(_.message)
+
+      . assert(_ == List("`TableCell` is exported to the umbrella package here"))
+
+      test(m"exports is positioned on the exported name"):
+        surfaceRules(compound, "export delta.{Table, TableCell}\n").map: v => (v.line, v.column)
+
+      . assert(_ == List((35, 22)))
+
+      test(m"exports sees a rename, and not a hidden name"):
+        surfaceRules(compound, "export delta.{Cell as TableCell, RowCell as _}\n").length
+
+      . assert(_ == 1)
+
+      test(m"exports ignores the members of a package block"):
+        surfaceRules(compound, "package strategies:\n  export delta.strategies.StrictMode\n")
+
+      . assert(_.isEmpty)
+
+      test(m"exports does not fire outside an export surface"):
+        surfaceRules(compound, "export delta.{TableCell}\n", "/project/lib/delta/src/core/x.scala")
+
+      . assert(_.isEmpty)
+
+      test(m"An excluded name is neither reported nor counted"):
+        val exempt = compound.copy(excluded = List("JsonPointer", "Media*"))
+        val body   = "export delta.{JsonPointer, MediaType, TableCell}\n"
+        val parsed = parse(body)
+
+        val ctx =
+          Context
+            ( surfacePath, Some("umbrella"), stub(body), parsed.tree, parsed.source, Nil, Nil,
+              Set.empty, umbrella.copy(rules = List(exempt), census = true) )
+
+        (surfaceRules(exempt, body).map(_.message), Metrics.collect(ctx))
+
+      . assert: outcome =>
+          outcome == (List("`TableCell` is exported to the umbrella package here"),
+              List("compound" -> 1))
+
+      test(m"A slash-delimited target is a regex for any name predicate"):
+        hits("class FooImpl\ndef impl(): Int = 1\nval implement = 2\n", "defines" -> "/Impl$/")
+
+      . assert(_ == 1)
+
+      test(m"An exclusion applies to any predicate's matched name"):
+        val definition = rule("unsafe", "invokes" -> "unsafe*").copy(excluded = List("unsafeOk"))
+        projectRules(definition, "val x = unsafeOk(1) + unsafeBad(2)\n").map(_.message)
+
+      . assert(_ == List("`unsafeBad` is invoked here"))
+
+      test(m"An exclusion option accumulates, and an invalid regex is reported"):
+        val (config, errors) =
+          Config.parse
+            ( List
+                ( "rule=compound:exports:/[a-z][A-Z]/",
+                  "rule=compound:exclude-name:JsonPointer;Media*",
+                  "rule=compound:exclude-name:/(/" ) )
+
+        (config.definition("compound").map(_.excluded), errors.length)
+
+      . assert(_ == (Some(List("JsonPointer", "Media*")), 1))
+
+      test(m"An invalid regex target is a configuration error"):
+        Config.parse(List("rule=compound:exports:/(/"))(1).length
+
+      . assert(_ > 0)
+
+      test(m"A name two components export is reported by both (L6)"):
+        val paths =
+          project
+            ( "delta" -> "export delta.{Namespace, Json}\n",
+              "gamma" -> "export gamma.{Namespace, Xml}\n" )
+
+        paths.map(uniqueness)
+
+      . assert: messages =>
+          val expected =
+            List
+              ( List("`Namespace` is also exported to the `umbrella` package by `gamma`"),
+                List("`Namespace` is also exported to the `umbrella` package by `delta`") )
+
+          messages == expected
+
+      test(m"Package blocks of the same name merge, so their members clash too (L6)"):
+        val paths =
+          project
+            ( "delta" -> "package strategies:\n  export delta.strategies.strict\n",
+              "gamma" -> "package strategies:\n  export gamma.strategies.strict\n",
+              "kappa" -> "package parsers:\n  export kappa.parsers.strict\n" )
+
+        uniqueness(paths(0))
+
+      . assert: messages =>
+          val target = "`umbrella.strategies`"
+          messages == List(s"`strict` is also exported to the $target package by `gamma`")
+
+      test(m"Distinct names, and a shared extension method name, are accepted (L6)"):
+        val paths =
+          project("delta" -> "export delta.{Json, in}\n", "gamma" -> "export gamma.{Xml, in}\n")
+
+        paths.flatMap(uniqueness)
+
+      . assert(_.isEmpty)
 
     suite(m"Linter"):
       test(m"The linter reports violations with severities and the census"):

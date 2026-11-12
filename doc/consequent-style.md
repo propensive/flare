@@ -212,7 +212,7 @@ name is re-exported to the project's umbrella package, so one import reaches
 everything; and prose documentation lives in `doc/`, not in doc-comments, so
 it has one home too.
 
-Rules: [L1], [L2], [L3], [L4], [L5], [F8.2].
+Rules: [L1], [L2], [L3], [L4], [L5], [L6], [F8.2].
 
 ### S — Soundness
 
@@ -1268,7 +1268,7 @@ When a type and its companion appear in the same file, place the companion
 resolved at use-site, so this ordering keeps the more frequently-read API
 surface at the top of the file.
 
-#### Umbrella re-exports [L4] [L5]
+#### Umbrella re-exports [L4] [L5] [L6]
 
 A project may define an *umbrella package*: a single package that
 re-exports every public name, so that one wildcard import reaches
@@ -1276,7 +1276,9 @@ everything. Where it does, every public module in a component — a top-level
 definition living in its own `<component>.<Name>.scala` file, other than
 `internal` modules — must be re-exported into the umbrella package by its
 export surface [L4], and every public top-level extension method
-likewise by its leaf name [L5] (unless marked `@unexported`).
+likewise by its leaf name [L5] (unless marked `@unexported`). Each name in
+the umbrella package has one home: no two components may export the same
+type-level name into it, nor the same name into a `package <name>:` block [L6].
 
 #### Documentation [F8.2]
 
@@ -1352,6 +1354,7 @@ the principle it derives from. Sub-rules (`A2.1`, `A9.3`) are documented with th
 | [`L3`](rules/L3.md) | Companion ordering | L — Locatability |
 | [`L4`](rules/L4.md) | Umbrella re-exports | L — Locatability |
 | [`L5`](rules/L5.md) | Umbrella re-exports | L — Locatability |
+| [`L6`](rules/L6.md) | Umbrella re-exports | L — Locatability |
 | [`S1`](rules/S1.md) | Unsafe naming | S — Soundness |
 
 ## Appendix A — Operator precedence classes

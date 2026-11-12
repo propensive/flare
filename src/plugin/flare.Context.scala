@@ -47,7 +47,8 @@ final class Context
     val siblingTypes:      List[String],
     val siblingExtensions: List[String],
     val unexported:        Set[String],
-    val config:            Config = Config() ):
+    val config:            Config = Config(),
+    val elsewhere:         Map[String, Set[String]] = Map.empty ):
 
   // Whether the standalone parse produced a usable tree. Every `lazy val`
   // below derives from `tree`; when the parse failed they are all empty, and a
@@ -74,6 +75,11 @@ final class Context
   lazy val umbrellaExports: ExportInfo =
     UmbrellaExports.extract(tree, source, config.packageLine)
 
+  // When this file is an export surface, every name it puts into the umbrella
+  // package; for any other file, nothing.
+  lazy val exported: List[Exported] =
+    if Umbrella.surfaceComponent(file, config).isEmpty then Nil else UmbrellaExports.exported(tree)
+
   lazy val anchors: Anchors.AnchorModel = Anchors.build(tree, source, text)
   lazy val quoteSites: QuoteSites.Model = QuoteSites.extract(lines)
 
@@ -84,4 +90,5 @@ final class Context
 
   // Every project rule's matches, evaluated together: the enforced rules
   // report theirs, and the census counts them all.
-  lazy val projectHits: List[Predicates.Hit] = Predicates.hits(config.rules, tree, source, text)
+  lazy val projectHits: List[Predicates.Hit] =
+    Predicates.hits(config.rules, tree, source, text, exported)

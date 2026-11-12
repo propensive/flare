@@ -71,9 +71,10 @@ final class ProjectRule(val definition: Definition) extends Rule:
     ctx.projectHits.filter(_.definition.name == definition.name).map: hit =>
       Violation(ctx.file, hit.line, hit.column, id, definition.message.getOrElse(describe(hit)))
 
-  // The default message: what the predicate saw, in its own terms.
+  // The default message: what the predicate saw, in its own terms, naming
+  // what it matched where that is a name.
   private def describe(hit: Predicates.Hit): String =
-    val target = hit.predicate.target
+    val target = hit.subject.getOrElse(hit.predicate.target)
 
     hit.predicate.kind match
       case "invokes"      => s"`$target` is invoked here"
@@ -85,6 +86,7 @@ final class ProjectRule(val definition: Definition) extends Rule:
       case "imports"      => s"`$target` is imported here"
       case "defines"      => s"`$target` is defined here"
       case "overrides"    => s"`$target` is overridden here"
+      case "exports"      => s"`$target` is exported to the umbrella package here"
       case "uses"         => s"`$target` is used here"
       case "matches"      => s"this line matches `$target`"
       case kind           => s"`$target` $kind here"
@@ -117,6 +119,9 @@ object Rules:
         LocatabilityRules.FileNaming, LocatabilityRules.CompanionOrdering,
         LocatabilityRules.UmbrellaExportCompleteness,
         LocatabilityRules.ExtensionExportCompleteness,
+        // UmbrellaNameUniqueness (L6) reports on an export selector, a
+        // position no layout rule occupies, so its place here costs nothing.
+        LocatabilityRules.UmbrellaNameUniqueness,
         // LineLength (F4) fired at the top of the old per-line walk, before
         // the quote/splice family — it must keep winning their one positional
         // collision (a 101-column line inside an inline splice).

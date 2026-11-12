@@ -57,6 +57,10 @@ rule imperative
   uses throw
   uses catch-all
 
+rule compound                     # multi-word names in the umbrella package, as a census
+  exports /^[A-Z].*[a-z0-9][A-Z]/ # a `/regex/` target, found anywhere in the name
+  exclude-name JsonPointer Media* # names the rule leaves alone: not reported, not counted
+
 # ── Profiles ─────────────────────────────────────────────────────────────────────────────────
 # What `flare` checks. With one profile, `flare` runs it; with several, `flare <name>`.
 
@@ -71,7 +75,7 @@ profile default
   style consequent                # the formatting standard, with its refinements beneath
     header etc/header.txt         # the licence header every file must begin with, verbatim
     columns 100
-    umbrella soundness            # the umbrella re-export package (enables L4 and L5)
+    umbrella soundness            # the umbrella re-export package (enables L4, L5 and L6)
     module-root lib               # the segment below which each module has its own directory
     interpolator m                # interpolators whose interior whitespace is insignificant
     omit L4                       # leave a rule out (or a whole principle: `omit S`)
@@ -89,7 +93,8 @@ profile default
 
 Every predicate names one shape on the untyped parse tree (or, for `matches`, on the text), so
 no rule needs the type checker. Names are matched on their simple (last) segment and may use
-`*` as a wildcard.
+`*` as a wildcard; a target written between slashes, `/[a-z][A-Z]/`, is instead a regular
+expression, found anywhere in the name.
 
 | Keyword | Matches |
 | --- | --- |
@@ -102,11 +107,16 @@ no rule needs the type checker. Names are matched on their simple (last) segment
 | `imports <path>` | an import of `path` or anything beneath it |
 | `defines <name>` | a `def`, `val`, `var`, `given`, `type`, class, trait, object or enum named `<name>` |
 | `overrides <name>` | an `override` definition named `<name>` |
+| `exports <name>` | a name an export surface puts into the umbrella package (the rename, for `x as y`), outside its `package <name>:` blocks; only with `umbrella` set |
 | `uses <construct>` | a construct: `var`, `null`, `throw`, `return`, `while`, `try`, `catch-all`, `implicit`, `lazy`, `abstract-type`, `wildcard-import`, `by-name`, `default-argument`, `symbolic-name` |
 | `matches <regex>` | a regular expression over each source line |
 
 A rule may also carry a `message` (shown in place of the default) and a `severity` (`warn`,
-the default, or `error`). A profile's `enforce` may override the severity.
+the default, or `error`). A profile's `enforce` may override the severity. An `exclude-name`
+line lists names — globs or `/regex/`es, any number to a line, the line repeatable — that the
+rule leaves alone: a match on one of them, the name an `invokes`, `defines`, `exports` (or any
+other name predicate) matched, is neither reported nor counted. It is how a census rule records
+the exceptions a project has ruled on, in one reviewable place.
 
 ## Running
 
@@ -176,8 +186,8 @@ the plugin's own: `;` separates a list's items (the compiler splits `-P` on comm
 plugin sees them) and `:` separates a value's fields — `header=<file>`, `columns=<n>`,
 `umbrella=<pkg>`, `moduleRoot=<segment>`, `language=a;b`, `interpolators=m;j`,
 `gate=Unsafe:unsafe`, `strict=F4;S`, `omit=L4`, `rule=cast:invokes:asInstanceOf`,
-`rule=cast:message:<text>`, `rule=cast:severity:error`, `enforce=cast` or `enforce=cast:error`,
-and `errors`.
+`rule=cast:message:<text>`, `rule=cast:severity:error`, `rule=cast:exclude-name:a;b*`,
+`enforce=cast` or `enforce=cast:error`, and `errors`.
 
 ## Modules
 

@@ -48,12 +48,20 @@ final case class Predicate(kind: String, target: String)
 
 // A project rule: a named detection assembled from predicates. Its `id` is its
 // name, so it sits alongside the style's rules in every report. `severity` is
-// the severity it carries when enforced and not overridden.
+// the severity it carries when enforced and not overridden. `excluded` holds
+// the names, as globs or `/regex/`es, that the rule deliberately leaves alone:
+// a match on such a name is neither reported nor counted.
 final case class Definition
   ( name:       String,
     predicates: List[Predicate] = Nil,
     message:    Option[String]  = None,
-    severity:   String          = "warn" )
+    severity:   String          = "warn",
+    excluded:   List[String]    = Nil ):
+
+  private lazy val exclusions: List[String => Boolean] = excluded.map(Predicates.names)
+
+  // Is a matched name one this rule leaves alone?
+  def excludes(name: String): Boolean = exclusions.exists(_(name))
 
 object Config:
   // Does a `strict`/`omit` entry select this rule? An entry names either a rule
@@ -135,15 +143,27 @@ object Config:
 
         // `rule=<name>:<kind>:<target>`, one predicate per option;
         // `rule=<name>:message:<text>` and `rule=<name>:severity:<level>`
-        // set the rule's metadata. The target may itself contain `:`, so
-        // only the first two are separators.
+        // set the rule's metadata, and `rule=<name>:exclude-name:<names>`
+        // adds names (`;`-separated) the rule leaves alone. The target may
+        // itself contain `:`, so only the first two are separators.
         case "rule" =>
           value.split(":", 3).nn.toList.map(_.nn) match
             case List(name, "message", text)  => define(name)(_.copy(message = Some(text)))
             case List(name, "severity", text) => define(name)(_.copy(severity = text))
 
+            case List(name, "exclude-name", names) =>
+              val (valid, invalid) = items(names).partition(Predicates.validateName(_).isEmpty)
+              invalid.flatMap(Predicates.validateName).foreach: error => errors += error
+              define(name): d => d.copy(excluded = d.excluded ++ valid)
+
             case List(name, kind, target) if Predicates.kinds.contains(kind) =>
-              define(name): d => d.copy(predicates = d.predicates :+ Predicate(kind, target))
+              val predicate = Predicate(kind, target)
+              val problem   = Predicates.validate(predicate)
+
+              problem.foreach: error => errors += error
+
+              if problem.isEmpty
+              then define(name): d => d.copy(predicates = d.predicates :+ predicate)
 
             case List(name, kind, _) =>
               errors +=
@@ -218,7 +238,7 @@ final case class Config
     columns: Int = 100,
 
     // The umbrella package into which every public module is re-exported. When
-    // unset, the umbrella-export rules (L4, L5) do not fire — a project need
+    // unset, the umbrella-export rules (L4, L5, L6) do not fire — a project need
     // not have an umbrella package.
     umbrella: Option[String] = None,
 

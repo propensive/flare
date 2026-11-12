@@ -194,3 +194,40 @@ object LocatabilityRules:
                   s"`${ctx.config.umbrella.getOrElse("")}` package: $listed" ) )
       else
         Nil
+
+  // L6: a name in the umbrella package must come from one component. Two
+  // components exporting the same type-level name into the umbrella package,
+  // or the same name into a `package <name>:` block (whose namespaces merge
+  // across surfaces), leave a reference to it ambiguous. A lowercase name in
+  // the umbrella package itself is exempt: it is almost always an extension
+  // method, and extension methods of one name from several components are
+  // told apart by their receivers (`in`, `from`, `to`).
+  //
+  // `elsewhere` maps every name the other components' surfaces export to the
+  // components exporting it; it is empty for every file other than an export
+  // surface, so this check is a no-op elsewhere. Each surface reports its own
+  // export, so both ends of a clash are found.
+  object UmbrellaNameUniqueness extends Rule:
+    def id: String = "L6"
+    def principle: Principle = Principle.Locatability
+
+    def check(ctx: Context): List[Violation] =
+      if ctx.elsewhere.isEmpty then Nil else
+        val umbrella = ctx.config.umbrella.getOrElse("")
+
+        val checked = ctx.exported.filter: exported =>
+          exported.scope.nonEmpty || exported.name.headOption.exists(_.isUpper)
+
+        checked.flatMap: exported =>
+          ctx.elsewhere.get(exported.qualified).filter(_.nonEmpty).map: components =>
+            val (line, column) = position(ctx, exported.offset)
+            val listed = components.to(List).sorted.map { c => s"`$c`" }.mkString(", ")
+            val target = (umbrella :: exported.scope).mkString(".")
+
+            Violation
+              ( ctx.file, line, column, "L6",
+                s"`${exported.name}` is also exported to the `$target` package by $listed" )
+
+    private def position(ctx: Context, offset: Int): (Int, Int) =
+      if offset < 0 || offset > ctx.source.content.length then (1, 1)
+      else (ctx.source.offsetToLine(offset) + 1, ctx.source.column(offset) + 1)

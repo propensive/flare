@@ -63,7 +63,7 @@ object Linter:
     val ctx =
       Context
         ( path, module, text, tree, source, siblings.modules, siblings.extensions,
-          siblings.unexported, config )
+          siblings.unexported, config, siblings.elsewhere )
 
     val violations = Checker.check(ctx).toList.map: v => (v, severity(config, v.rule))
     val census     = if config.census then Metrics.collect(ctx) else Nil

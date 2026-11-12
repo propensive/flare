@@ -105,6 +105,7 @@ changes.
 | [`L3`](L3.md) | `object` must precede `class`/`trait`/`enum` of same name |
 | [`L4`](L4.md) | Definition not exported to the umbrella package |
 | [`L5`](L5.md) | Extension method not exported to the umbrella package |
+| [`L6`](L6.md) | Name exported to the umbrella package by two components |
 
 ## S — Soundness
 

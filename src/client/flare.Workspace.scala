@@ -49,6 +49,7 @@ import pyrocosm.Tool
 //     invokes asInstanceOf
 //     message  Casts bypass the type checker; prefer a pattern match
 //     severity error
+//     exclude-name unsafeCast*      # names the rule leaves alone (globs or `/regex/`es)
 //
 //   model haiku                     # a model target for `flare assess`
 //     model      claude-haiku-4-5
@@ -92,7 +93,11 @@ object Workspace:
   case class Predicate(kind: Text, target: Text)
 
   case class Rule
-    ( name: Text, predicates: List[Predicate], message: Optional[Text], severity: Optional[Text] )
+    ( name:       Text,
+      predicates: List[Predicate],
+      message:    Optional[Text],
+      severity:   Optional[Text],
+      excluded:   List[Text] = Nil )
 
   case class Gate(token: Text, prefix: Optional[Text])
 
@@ -228,7 +233,11 @@ object Workspace:
           val severity: List[Text] =
             option(t"rule", rule.severity.let { (level: Text) => t"$name:severity:$level" })
 
-          predicates + message + severity
+          val excluded: List[Text] =
+            if rule.excluded.nil then Nil
+            else List(t"rule=$name:exclude-name:${rule.excluded.join(t";")}")
+
+          predicates + message + severity + excluded
 
       val enforcements: List[Text] =
         profile.enforced.map: (e: Enforcement) =>
@@ -417,8 +426,10 @@ object Workspace:
 
         val kinds: List[Text] = List.from(Predicates.kinds.map(_.tt))
 
+        val metadata: List[Text] = List(t"message", t"severity", t"exclude-name")
+
         node.childCompounds.to[List].map(_.keyword).each: (keyword: Text) =>
-          if keyword != t"message" && keyword != t"severity" && !kinds.has(keyword) then
+          if !metadata.has(keyword) && !kinds.has(keyword) then
             val expected = kinds.join(t", ")
             fail(t"rule `$name`: `$keyword` is not a predicate; expected one of $expected")
 
@@ -434,10 +445,20 @@ object Workspace:
 
         if predicates.nil then fail(t"rule `$name` has no predicates")
 
+        // Names the rule leaves alone, any number to a line.
+        val excluded: List[Text] =
+          node.fields(t"exclude-name").to[List].bind: (child: Tel) =>
+            child.atomTexts.to[List].filter(_ != t"")
+
+        excluded.each: (excludedName: Text) =>
+          Predicates.validateName(excludedName.s).foreach: (error: String) =>
+            fail(t"rule `$name`: ${error.tt}")
+
         Rule
           ( name, predicates,
             node.field(t"message").let(phrase(_)),
-            atoms(node, t"severity").head )
+            atoms(node, t"severity").head,
+            excluded )
 
     (rules.map(_.name) + assessments.map(_.name)).each: (name: Text) =>
       if (rules.filter(_.name == name).size + assessments.filter(_.name == name).size) > 1 then

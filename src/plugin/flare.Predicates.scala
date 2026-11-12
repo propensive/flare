@@ -45,6 +45,10 @@ import dotty.tools.dotc.util.SourceFile
 // output alone — no rule needs the typer — which is what lets `flare check`
 // stop the compiler after parsing.
 //
+// One predicate, `exports`, reads no tree shape at all: it matches the names an
+// export surface puts into the project's umbrella package (`UmbrellaExports`),
+// which is what makes a rule about the umbrella's namespace expressible.
+//
 // Matching is by name and by tree shape, on the same untyped tree every style
 // rule sees. That is the same precision class as the rest of the checker: a
 // `Select` named `get` is counted wherever it appears, without asking what it
@@ -55,7 +59,7 @@ object Predicates:
   val kinds: List[String] =
     List
       ( "invokes", "references", "annotates", "instantiates", "extends", "derives", "imports",
-        "defines", "overrides", "uses", "matches" )
+        "defines", "overrides", "exports", "uses", "matches" )
 
   // The constructs `uses` recognises.
   val constructs: Set[String] =
@@ -63,8 +67,15 @@ object Predicates:
       ( "var", "null", "throw", "return", "while", "try", "catch-all", "implicit", "lazy",
         "abstract-type", "wildcard-import", "by-name", "default-argument", "symbolic-name" )
 
-  // One match of one predicate, positioned at the construct it matched.
-  final case class Hit(definition: Definition, predicate: Predicate, line: Int, column: Int)
+  // One match of one predicate, positioned at the construct it matched, with
+  // the name it matched on where the predicate matches a name (`uses` and
+  // `matches` do not).
+  final case class Hit
+    ( definition: Definition,
+      predicate:  Predicate,
+      line:       Int,
+      column:     Int,
+      subject:    Option[String] = None )
 
   // Is this predicate well-formed? An unknown kind, an unknown construct or a
   // regex that does not compile is a configuration error, reported up front
@@ -82,19 +93,53 @@ object Predicates:
       Some(s"`$kind` is not a predicate; expected one of ${kinds.mkString("`", "`, `", "`")}")
 
     case _ =>
-      None
+      validateName(predicate.target)
 
-  // Every hit of every definition in one file, in one traversal.
-  def hits(definitions: List[Definition], tree: untpd.Tree, source: SourceFile, text: String)
+  // Is a name target well-formed? A glob always is; a `/regex/` must compile.
+  def validateName(target: String): Option[String] =
+    try { pattern(target).foreach(_.r); None }
+    catch case _: Exception => Some(s"`$target` is not a valid regular expression")
+
+  // A name target written between slashes, `/[a-z][A-Z]/`, is a regular
+  // expression found anywhere in the name, where any other target is a glob
+  // matching the whole of it.
+  def pattern(target: String): Option[String] =
+    Option.when(target.length > 2 && target.startsWith("/") && target.endsWith("/")):
+      target.substring(1, target.length - 1).nn
+
+  // Does a name match a glob, or a `/regex/`, target?
+  def names(target: String): String => Boolean = pattern(target) match
+    case Some(regex) =>
+      val compiled = regex.r
+      name => compiled.findFirstIn(name).isDefined
+
+    case None =>
+      val compiled = glob(target)
+      name => compiled.matches(name)
+
+  // Every hit of every definition in one file, in one traversal. `exported` is
+  // what the file puts into the umbrella package, when it is an export
+  // surface, for the `exports` predicate; it is empty for every other file.
+  def hits
+    ( definitions: List[Definition],
+      tree:        untpd.Tree,
+      source:      SourceFile,
+      text:        String,
+      exported:    List[Exported] = Nil )
   :   List[Hit] =
 
     if definitions.isEmpty then Nil else
       val matchers = definitions.map(Matcher(_))
       val out      = mutable.ListBuffer[Hit]()
 
-      def emit(definition: Definition, predicate: Predicate, offset: Int): Unit =
-        val (line, column) = position(source, offset)
-        out += Hit(definition, predicate, line, column)
+      // A hit on a name the definition excludes is not a hit at all, so it is
+      // neither reported nor counted.
+      def emit(definition: Definition, predicate: Predicate, offset: Int, subject: Option[String])
+      :   Unit =
+
+        if !subject.exists(definition.excludes) then
+          val (line, column) = position(source, offset)
+          out += Hit(definition, predicate, line, column, subject)
 
       // Tree shapes. An annotation's own tree — `@Name(args)` is parsed as a
       // constructor call — is walked with `annotation` set, so that
@@ -127,38 +172,50 @@ object Predicates:
       // Text shapes: `matches` runs over the lines, independent of the tree.
       matchers.foreach(_.scan(text, emit))
 
+      // The umbrella's names: `exports` sees those the surface puts into the
+      // umbrella package itself, not into a `package <name>:` block, whose
+      // members are namespaced by the block already.
+      exported.filter(_.scope.isEmpty).foreach: name => matchers.foreach(_.surface(name, emit))
+
       out.toList.sortBy: hit => (hit.line, hit.column)
 
   private def position(source: SourceFile, offset: Int): (Int, Int) =
     if offset < 0 || offset > source.content.length then (1, 1)
     else (source.offsetToLine(offset) + 1, source.column(offset) + 1)
 
+  private type Emit = (Definition, Predicate, Int, Option[String]) => Unit
+
   // A definition's predicates, compiled once: name globs become regexes.
   private final class Matcher(definition: Definition):
     private val compiled: List[(Predicate, Compiled)] =
       definition.predicates.map: p => (p, Compiled(p))
 
-    def visit(tree: untpd.Tree, annotation: Boolean, emit: (Definition, Predicate, Int) => Unit)
-    :   Unit =
-
+    def visit(tree: untpd.Tree, annotation: Boolean, emit: Emit): Unit =
       compiled.foreach: (predicate, matcher) =>
-        if matcher.tree(tree, annotation) then emit(definition, predicate, point(tree))
+        matcher.tree(tree, annotation).foreach: subject =>
+          emit(definition, predicate, point(tree), subject)
 
-    def scan(text: String, emit: (Definition, Predicate, Int) => Unit): Unit =
+    def scan(text: String, emit: Emit): Unit =
       compiled.foreach: (predicate, matcher) =>
         matcher.regex.foreach: regex =>
           var offset = 0
 
           Config.lines(text).foreach: line =>
-            regex.findFirstMatchIn(line).foreach: m => emit(definition, predicate, offset + m.start)
+            regex.findFirstMatchIn(line).foreach: m =>
+              emit(definition, predicate, offset + m.start, None)
+
             offset += line.length + 1
+
+    def surface(name: Exported, emit: Emit): Unit =
+      compiled.foreach: (predicate, matcher) =>
+        if matcher.exports(name.name) then emit(definition, predicate, name.offset, Some(name.name))
 
   private def point(tree: untpd.Tree): Int =
     if tree.span.exists then tree.span.point else -1
 
   // One compiled predicate.
   private final class Compiled(predicate: Predicate):
-    private val name: scala.util.matching.Regex = glob(predicate.target)
+    private val name: String => Boolean = names(predicate.target)
 
     // For `matches`: the pattern itself.
     val regex: Option[scala.util.matching.Regex] =
@@ -166,115 +223,128 @@ object Predicates:
 
     // Does the name match the predicate's target? Targets are matched on the
     // simple name, with `*` standing for any run of characters.
-    private def named(text: String): Boolean = name.matches(text)
+    private def named(text: String): Boolean = name(text)
+
+    // For `exports`: does an exported name match?
+    def exports(text: String): Boolean = predicate.kind == "exports" && named(text)
 
     // Does a dotted path match? Exactly, by glob, or as a prefix: `imports
     // scala.collection.mutable` catches `scala.collection.mutable.Map`.
     private def pathed(path: String): Boolean =
       named(path) || path.startsWith(predicate.target + ".")
 
-    def tree(tree: untpd.Tree, annotation: Boolean): Boolean = predicate.kind match
-      case "references" => tree match
-        case untpd.Ident(n)     => named(n.toString)
-        case untpd.Select(_, n) => named(n.toString)
+    // Does the tree match? `Some(Some(name))` for a predicate over names,
+    // carrying the name it matched; `Some(None)` for a construct `uses`
+    // recognises; `None` for no match. Inside an annotation, only `annotates`
+    // and `references` match.
+    def tree(tree: untpd.Tree, annotation: Boolean): Option[Option[String]] =
+      if predicate.kind == "uses" then Option.when(!annotation && construct(tree))(None)
+      else subject(tree, annotation).map(Some(_))
+
+    private def matching(text: String): Option[String] = Option.when(named(text))(text)
+
+    private def subject(tree: untpd.Tree, annotation: Boolean): Option[String] =
+      predicate.kind match
+        case "references" => tree match
+          case untpd.Ident(n)     => matching(n.toString)
+          case untpd.Select(_, n) => matching(n.toString)
+          case _                  => None
+
+        case "annotates" => if !annotation then None else tree match
+          case untpd.New(tpt) => typeName(tpt).filter(named)
+          case _              => None
+
+        case _ if annotation => None
+
+        case "invokes" => tree match
+          case untpd.Select(_, n)      => matching(n.toString)
+          case untpd.Apply(fun, _)     => invokedIdent(fun).filter(named)
+          case untpd.TypeApply(fun, _) => invokedIdent(fun).filter(named)
+          case untpd.InfixOp(_, op, _) => matching(op.name.toString)
+          case untpd.PostfixOp(_, op)  => matching(op.name.toString)
+          case untpd.PrefixOp(op, _)   => matching(op.name.toString)
+          case _                       => None
+
+        case "instantiates" => tree match
+          case untpd.New(tpt) => typeName(tpt).filter(named)
+
+          case untpd.Apply(fun, _) =>
+            val selected = fun match
+              case untpd.Select(_, n)                     => Some(n.toString)
+              case untpd.TypeApply(untpd.Select(_, n), _) => Some(n.toString)
+              case _                                      => None
+
+            invokedIdent(fun).orElse(selected).filter: n =>
+              n.headOption.exists(_.isUpper) && named(n)
+
+          case _ => None
+
+        case "extends" => parents(tree).flatMap(typeName).find(named)
+        case "derives" => template(tree).to(List).flatMap(_.derived).flatMap(typeName).find(named)
+
+        case "imports" => tree match
+          case untpd.Import(expr, selectors) =>
+            path(expr).flatMap: base =>
+              val beneath = selectors.filterNot(_.isWildcard).map(base + "." + _.name.toString)
+              (base :: beneath).find(pathed)
+
+          case _ => None
+
+        case "defines" => tree match
+          case defn: untpd.MemberDef if definable(defn) => matching(defn.name.toString)
+          case _                                        => None
+
+        case "overrides" => tree match
+          case defn: untpd.MemberDef if defn.mods.is(Flags.Override) =>
+            matching(defn.name.toString)
+
+          case _ => None
+
+        case _ => None
+
+    // A construct `uses` recognises.
+    private def construct(tree: untpd.Tree): Boolean = predicate.target match
+      case "var" => tree match
+        case defn: untpd.ValDef => defn.mods.is(Flags.Mutable)
         case _                  => false
 
-      case "annotates" => annotation && (tree match
-        case untpd.New(tpt) => typeName(tpt).exists(named)
-        case _              => false)
+      case "null" => tree match
+        case untpd.Literal(Constant(null)) => true
+        case _                             => false
 
-      case _ if annotation => false
+      case "throw"     => tree.isInstanceOf[untpd.Throw]
+      case "return"    => tree.isInstanceOf[untpd.Return]
+      case "while"     => tree.isInstanceOf[untpd.WhileDo]
+      case "try"       => tree.isInstanceOf[untpd.Try] || tree.isInstanceOf[untpd.ParsedTry]
+      case "catch-all" => catchCases(tree).exists: c => catchesEverything(c.pat)
 
-      case "invokes" => tree match
-        case untpd.Select(_, n)                   => named(n.toString)
-        case untpd.Apply(fun, _)                  => invokedIdent(fun).exists(named)
-        case untpd.TypeApply(fun, _)              => invokedIdent(fun).exists(named)
-        case untpd.InfixOp(_, op, _)              => named(op.name.toString)
-        case untpd.PostfixOp(_, op)               => named(op.name.toString)
-        case untpd.PrefixOp(op, _)                => named(op.name.toString)
-        case _                                    => false
-
-      case "instantiates" => tree match
-        case untpd.New(tpt) => typeName(tpt).exists(named)
-
-        case untpd.Apply(fun, _) =>
-          invokedIdent(fun).exists { n => n.headOption.exists(_.isUpper) && named(n) } ||
-            (fun match
-              case untpd.Select(_, n) =>
-                n.toString.headOption.exists(_.isUpper) && named(n.toString)
-
-              case untpd.TypeApply(untpd.Select(_, n), _) =>
-                n.toString.headOption.exists(_.isUpper) && named(n.toString)
-
-              case _ => false)
-
-        case _ => false
-
-      case "extends" =>
-        parents(tree).exists: parent => typeName(parent).exists(named)
-
-      case "derives" =>
-        template(tree).exists(_.derived.exists { d => typeName(d).exists(named) })
-
-      case "imports" => tree match
-        case untpd.Import(expr, selectors) =>
-          path(expr).exists: base =>
-            pathed(base) || selectors.exists: selector =>
-              !selector.isWildcard && pathed(base + "." + selector.name.toString)
-        case _ => false
-
-      case "defines" => tree match
-        case defn: untpd.MemberDef => definable(defn) && named(defn.name.toString)
+      case "implicit" => tree match
+        case defn: untpd.MemberDef => defn.mods.is(Flags.Implicit)
         case _                     => false
 
-      case "overrides" => tree match
-        case defn: untpd.MemberDef => defn.mods.is(Flags.Override) && named(defn.name.toString)
+      case "lazy" => tree match
+        case defn: untpd.MemberDef => defn.mods.is(Flags.Lazy)
         case _                     => false
 
-      case "uses" => predicate.target match
-        case "var" => tree match
-          case defn: untpd.ValDef => defn.mods.is(Flags.Mutable)
-          case _                  => false
+      case "abstract-type" => tree match
+        case defn: untpd.TypeDef =>
+          !defn.mods.is(Flags.Param) && defn.rhs.isInstanceOf[untpd.TypeBoundsTree]
+        case _ => false
 
-        case "null" => tree match
-          case untpd.Literal(Constant(null)) => true
-          case _                             => false
+      case "wildcard-import" => tree match
+        case untpd.Import(_, selectors) => selectors.exists(_.isWildcard)
+        case _                          => false
 
-        case "throw"     => tree.isInstanceOf[untpd.Throw]
-        case "return"    => tree.isInstanceOf[untpd.Return]
-        case "while"     => tree.isInstanceOf[untpd.WhileDo]
-        case "try"       => tree.isInstanceOf[untpd.Try] || tree.isInstanceOf[untpd.ParsedTry]
-        case "catch-all" => catchCases(tree).exists: c => catchesEverything(c.pat)
+      case "by-name" => tree.isInstanceOf[untpd.ByNameTypeTree]
 
-        case "implicit" => tree match
-          case defn: untpd.MemberDef => defn.mods.is(Flags.Implicit)
-          case _                     => false
+      case "default-argument" => tree match
+        case defn: untpd.ValDef => defn.mods.is(Flags.Param) && !rhs(defn).isEmpty
+        case _                  => false
 
-        case "lazy" => tree match
-          case defn: untpd.MemberDef => defn.mods.is(Flags.Lazy)
-          case _                     => false
-
-        case "abstract-type" => tree match
-          case defn: untpd.TypeDef =>
-            !defn.mods.is(Flags.Param) && defn.rhs.isInstanceOf[untpd.TypeBoundsTree]
-          case _ => false
-
-        case "wildcard-import" => tree match
-          case untpd.Import(_, selectors) => selectors.exists(_.isWildcard)
-          case _                          => false
-
-        case "by-name" => tree.isInstanceOf[untpd.ByNameTypeTree]
-
-        case "default-argument" => tree match
-          case defn: untpd.ValDef => defn.mods.is(Flags.Param) && !rhs(defn).isEmpty
-          case _                  => false
-
-        case "symbolic-name" => tree match
-          case defn: untpd.DefDef =>
-            val n = defn.name.toString
-            n.nonEmpty && n.forall: c => !c.isLetterOrDigit && c != '_' && c != '<' && c != '>'
-
-          case _ => false
+      case "symbolic-name" => tree match
+        case defn: untpd.DefDef =>
+          val n = defn.name.toString
+          n.nonEmpty && n.forall: c => !c.isLetterOrDigit && c != '_' && c != '<' && c != '>'
 
         case _ => false
 
