@@ -42,7 +42,7 @@ case class ExportInfo(names: Set[String], firstLine: Int)
 object UmbrellaExports:
   // Collect the simple leaf names re-exported by every top-level `export`
   // statement in the file (including those nested inside `package x:` blocks),
-  // together with the line of the first such statement. Used by L4 to check
+  // together with the line of the first such statement. Used by ↯/c.8.4 to check
   // that each public module in a component is re-exported into the umbrella
   // package. `packageLine` is the fallback position, used when a surface
   // contains no exports at all and there is no export to point at.

@@ -32,7 +32,7 @@
                                                                                                   */
 package flare
 
-// The umbrella-package analysis behind L4 and L5: what an export surface's
+// The umbrella-package analysis behind ↯/c.8.4 and ↯/c.8.5: what an export surface's
 // sibling files declare, so that the surface can be checked for completeness.
 // It reads and parses neighbouring `.scala` files itself, with the same
 // language features the compilation is running with, so the plugin and the
@@ -42,7 +42,7 @@ package flare
 // package, and the umbrella rules are then no-ops.
 object Umbrella:
   // What the umbrella rules need to know about `path`'s siblings: the public
-  // modules L4 requires to be re-exported, the extension methods L5 requires,
+  // modules ↯/c.8.4 requires to be re-exported, the extension methods ↯/c.8.5 requires,
   // and the names deliberately excluded from both.
   final case class Siblings
     ( modules: List[String], extensions: List[String], unexported: Set[String] )
@@ -86,7 +86,7 @@ object Umbrella:
 
   // When `path` is an export surface, the names of the sibling public modules
   // (`<component>.<Name>.scala` files in the same directory, excluding any
-  // `internal` module) that L4 requires to be re-exported. A module is
+  // `internal` module) that ↯/c.8.4 requires to be re-exported. A module is
   // included only when its file declares `Name` publicly: modules with no
   // accessible top-level declaration (e.g. a `private[component] object`)
   // cannot be — and need not be — re-exported.
@@ -106,7 +106,7 @@ object Umbrella:
               declaresPublicly(sibling, module)
 
   // When `path` is an export surface, the names of the public top-level
-  // extension methods that L5 requires to be re-exported. They live in the
+  // extension methods that ↯/c.8.5 requires to be re-exported. They live in the
   // sibling `<component>_<suffix>.scala` definition files (e.g.
   // `xylophone_core.scala`) in the same directory; their lowercase
   // `<component>_` prefix distinguishes them from the `<umbrella>_…` and
@@ -135,7 +135,7 @@ object Umbrella:
   // When `path` is an export surface, the simple names of every sibling
   // definition annotated `@unexported` — both in the `<component>.<Name>
   // .scala` module files and the `<component>_<suffix>.scala` definition files
-  // in the same directory. L4 and L5 treat these names as deliberately
+  // in the same directory. ↯/c.8.4 and ↯/c.8.5 treat these names as deliberately
   // excluded from the umbrella package.
   private def unexported(path: String, config: Config, features: List[String]): Set[String] =
     surfaceComponent(path, config).to(Set).flatMap: component =>

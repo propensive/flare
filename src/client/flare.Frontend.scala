@@ -52,7 +52,11 @@ import pyrocosm.Runtimes
 // needs no classpath. What comes back is each unit's untyped tree, which is what the rules read,
 // plus whatever the compiler reported on the way: a file that does not parse is a finding too.
 object Frontend:
-  case class Diagnostic(path: Text, line: Int, column: Int, message: Text, error: Boolean)
+  case class Diagnostic(path: Text, line: Int, column: Int, message: Text, error: Boolean):
+    // The compiler's message has no code of its own; flare reports a source which does not
+    // parse as `↯/f.23.8`.
+    def bolt: fulminate.Bolt = pyrocosm.Bolts(FlareBolts.client, 8)
+
   case class Parsed(path: Text, text: Text, tree: untpd.Tree, source: SourceFile)
   case class Result(units: List[Parsed], diagnostics: List[Diagnostic])
 

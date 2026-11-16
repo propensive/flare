@@ -71,13 +71,13 @@ profile default
   style consequent                # the formatting standard, with its refinements beneath
     header etc/header.txt         # the licence header every file must begin with, verbatim
     columns 100
-    umbrella soundness            # the umbrella re-export package (enables L4 and L5)
+    umbrella soundness            # the umbrella re-export package (enables ↯/c.8.4 and ↯/c.8.5)
     module-root lib               # the segment below which each module has its own directory
     interpolator m                # interpolators whose interior whitespace is insignificant
-    omit L4                       # leave a rule out (or a whole principle: `omit S`)
-    strict F4                     # report a rule as an error
+    omit c.8.4                    # leave a rule out (or a whole principle: `omit c.9`)
+    strict c.1.4                  # report a rule as an error
     severity warn                 # the default severity of the style's rules: warn | error
-    gate Unsafe                   # S1: a `using` parameter of type Unsafe must pair with a
+    gate Unsafe                   # ↯/c.9.1: a `using` parameter of type Unsafe must pair with a
       prefix unsafe               # name beginning `unsafe`, and vice versa; repeatable
 
   enforce cast                    # a rule this profile checks
@@ -128,13 +128,33 @@ test run on — whose content panel scrolls the findings as each file is checked
 panel gauges how many files have been parsed and then checked; the report is printed once the
 board closes. `metrics` shows the same board for parsing and counting, listing each file's
 counts as they arrive. With `--terse`, or under GitHub Actions, or when the output is not a
-terminal, it prints one `path:line:column: level: [rule] message` line per finding instead,
+terminal, it prints one `path:line:column: level: [code] message` line per finding instead,
 with no board. It exits non-zero when any error-severity rule fired
 (status 1) or a source failed to parse (status 5).
 
 The compiler is invoked on the profile's sources and stopped after the last phase any enabled
 rule needs — the parser, for every rule so far — so a check costs a parse and needs no
 classpath.
+
+### Codes
+
+Every finding, and every failure flare reports before it exits, is named by a
+[bolt code](https://github.com/propensive/bolt), under the `f` of Pyrocosm and its tools; flare's
+modules are its subdivisions 21 (`plugin`), 22 (`records`), 23 (`client`) and 24 (`launcher`). A
+violation of a rule of Consequent Style is flare's `↯/f.21.1`, carrying the rule's own code,
+which names the rule in the [rule reference](/doc/rules/):
+
+```
+src/core/app.Main.scala:12:5: warning: [↯/f.21.1/c.2.2.1] keyword `else` must start on …
+```
+
+A project rule has no code of its own, so a violation of one is `↯/f.21.2`, followed by the
+rule's name: `[↯/f.21.2] cast: Casts bypass the type checker; prefer a pattern match`. An option
+the plugin cannot use is a variant of `↯/f.21.3`; among them, `↯/f.21.3.9` reports an `omit` or
+`strict` entry which still names a rule in the letter form of the identifiers before the codes
+(`L4 is now c.8.4`). The command's own failures — a configuration it cannot use, a source which
+does not parse, git notes it cannot read or write — are codes of `↯/f.23`; the record of what
+each means is `f.tel` in the bolt registry. `flare rules` lists the style's rules by code.
 
 ### The census and git notes
 
@@ -171,11 +191,12 @@ def scalacPluginMvnDeps = Seq(mvn"dev.propensive:flare-plugin:$version")
 def scalacOptions = super.scalacOptions() ++ os.proc("flare", "options").call().out.lines()
 ```
 
-Violations are reported as warnings, or errors where the profile says so. The option syntax is
+Violations are reported as warnings, or errors where the profile says so, each labelled with its
+code as `flare check` labels it (see [Codes](#codes)). The option syntax is
 the plugin's own: `;` separates a list's items (the compiler splits `-P` on commas before the
 plugin sees them) and `:` separates a value's fields — `header=<file>`, `columns=<n>`,
 `umbrella=<pkg>`, `moduleRoot=<segment>`, `language=a;b`, `interpolators=m;j`,
-`gate=Unsafe:unsafe`, `strict=F4;S`, `omit=L4`, `rule=cast:invokes:asInstanceOf`,
+`gate=Unsafe:unsafe`, `strict=c.1.4;c.9`, `omit=c.8.4`, `rule=cast:invokes:asInstanceOf`,
 `rule=cast:message:<text>`, `rule=cast:severity:error`, `enforce=cast` or `enforce=cast:error`,
 and `errors`.
 

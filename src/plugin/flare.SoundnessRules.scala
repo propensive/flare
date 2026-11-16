@@ -74,7 +74,7 @@ object SoundnessRules:
     case untpd.Select(_, name) => name.toString == target
     case _                     => false
 
-  // S1: a method that takes a gate's token as a `using` parameter must be
+  // ↯/c.9.1: a method that takes a gate's token as a `using` parameter must be
   // named for what it is, and a method named for what it is must take the
   // token. The two directions are one rule because either alone is a lie: an
   // ungated `unsafe…` name claims a checked boundary that nothing enforces,
@@ -83,7 +83,7 @@ object SoundnessRules:
   // The gates are configuration, and the rule does not fire when there are
   // none — a project that has no such token has nothing to check.
   object UnsafeNaming extends Rule:
-    def id: String = "S1"
+    def id: String = "c.9.1"
     def principle: Principle = Principle.Soundness
 
     def check(ctx: Context): List[Violation] =
@@ -97,10 +97,10 @@ object SoundnessRules:
             val gating = gated(defn, gate)
 
             if gating && !claim then
-              out += violation(ctx, defn, "S1.1",
+              out += violation(ctx, defn, "c.9.1.1",
                   s"`$name` is gated by `${gate.token}`, so its name must begin `${gate.prefix}`")
             else if claim && !gating then
-              out += violation(ctx, defn, "S1.2",
+              out += violation(ctx, defn, "c.9.1.2",
                   s"`$name` is named as `${gate.prefix}`, so it must take " +
                     s"`(using erased ${gate.token})`")
 

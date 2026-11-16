@@ -62,7 +62,7 @@ object Operators:
   // `A *: B`) — both follow the same continuation rule. Pattern alternatives
   // (`case A | B`) are `untpd.Alternative` nodes and never match here; `.`
   // method selection is a `Select` node (and `.` is not a symbolic operator),
-  // so chain continuation stays the province of rules C1.1/C1.2.
+  // so chain continuation stays the province of rules ↯/c.4.1.1 and ↯/c.4.1.2.
   //
   // The required continuation indent is anchored on the first line of the
   // whole *chain*, not on each operator's immediate left operand: a chain of

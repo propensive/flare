@@ -35,29 +35,29 @@ package flare
 import scala.collection.mutable
 
 object DensityRules:
-  // D1 — the "necessity" rule: a construct spread over several source
+  // ↯/c.3.1 — the "necessity" rule: a construct spread over several source
   // lines whose one-line rendering would fit within the line limit is a
   // violation — a break must always mean "didn't fit". The measurement,
   // the construct kinds covered, and the (extensive) bail-outs all live in
   // `Necessity`.
   object UnnecessaryBreak extends Rule:
-    def id: String = "D1"
+    def id: String = "c.3.1"
     def principle: Principle = Principle.Density
 
     def check(ctx: Context): List[Violation] =
       ctx.necessity.map: site =>
         Violation
-          ( ctx.file, site.line, site.col, "D1",
+          ( ctx.file, site.line, site.col, "c.3.1",
             s"this ${site.kind} fits on one line (would be ${site.width} columns); " +
               "breaks are reserved for code that does not fit" )
 
-  // D2 — lambda layout, four sub-rules:
-  //   D2.1 named single-line lambda using `(…)` (must be `{…}` or `: …`)
-  //   D2.2 named single-line `{…}` at end-of-line (must be `: …`)
-  //   D2.3 multi-line lambda using `{…}` or `(…)` (must be `: …`)
-  //   D2.4 anonymous (placeholder) lambda using `{…}` or `: …` (must be `(…)`)
+  // ↯/c.3.2 — lambda layout, four sub-rules:
+  //   ↯/c.3.2.1 named single-line lambda using `(…)` (must be `{…}` or `: …`)
+  //   ↯/c.3.2.2 named single-line `{…}` at end-of-line (must be `: …`)
+  //   ↯/c.3.2.3 multi-line lambda using `{…}` or `(…)` (must be `: …`)
+  //   ↯/c.3.2.4 anonymous (placeholder) lambda using `{…}` or `: …` (must be `(…)`)
   object LambdaLayout extends Rule:
-    def id: String = "D2"
+    def id: String = "c.3.2"
     def principle: Principle = Principle.Density
 
     def check(ctx: Context): List[Violation] =
@@ -72,14 +72,14 @@ object DensityRules:
           if s.opener != Opener.Colon then
             out +=
               Violation
-                ( file, s.openerLine, s.openerCol, "D2.3",
+                ( file, s.openerLine, s.openerCol, "c.3.2.3",
                   "multi-line lambda must use a colon-arg `f: x => …` form, " +
                     s"not `${s.opener.toString.toLowerCase}`" )
         else if s.isAnonymous then
           if s.opener != Opener.Paren then
             out +=
               Violation
-                ( file, s.openerLine, s.openerCol, "D2.4",
+                ( file, s.openerLine, s.openerCol, "c.3.2.4",
                   "anonymous (`_`-)lambda must be wrapped in `(…)`, not " +
                     s"`${s.opener.toString.toLowerCase}`" )
         else // named, single-line
@@ -90,12 +90,12 @@ object DensityRules:
 
             out +=
               Violation
-                ( file, s.openerLine, s.openerCol, "D2.1",
+                ( file, s.openerLine, s.openerCol, "c.3.2.1",
                   "named-parameter lambda must be wrapped in `{…}`, not `(…)`" + alternative )
           else if s.opener == Opener.Brace && s.lastOnLine then
             out +=
               Violation
-                ( file, s.openerLine, s.openerCol, "D2.2",
+                ( file, s.openerLine, s.openerCol, "c.3.2.2",
                   "lambda is the last thing on its line; prefer `f: x => …` " +
                     "over `f { x => … }`" )
 

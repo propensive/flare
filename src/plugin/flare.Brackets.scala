@@ -35,8 +35,8 @@ package flare
 import scala.collection.mutable
 
 // Whole-file lexical extraction of `(`/`[` bracket pairs for the
-// bracket-shaped rules: B4 (interior spacing of formal multi-line
-// blocks) and B5 (no interior padding in compact single-line brackets).
+// bracket-shaped rules: ↯/c.5.4 (interior spacing of formal multi-line
+// blocks) and ↯/c.5.5 (no interior padding in compact single-line brackets).
 // Bracket pairing is lexical — the same whole-file `(`/`[` stack the
 // original per-line walk maintained, split there between an inline stack
 // and a cross-line formality stack — so the extraction is deliberately
@@ -51,7 +51,7 @@ import scala.collection.mutable
 // on its opening line the classification is refined to a **formal
 // block** — the closer must be followed only by a body opener, and the
 // interior must have argument-list shape; otherwise the pair is a
-// compact bracket governed by B5. A pair that closes on a later line
+// compact bracket governed by ↯/c.5.5. A pair that closes on a later line
 // keeps the candidate flag alone, exactly as the old cross-line stack
 // did.
 object Brackets:
@@ -62,7 +62,7 @@ object Brackets:
   // multi-line or unmatched one. `openerIndent` is the leading-columns
   // value of the opener's line; `lambdaBodyTuple` marks a compact pair
   // spanning a whole line that follows a line ending in `=>` (a lambda
-  // or match-case body tuple, exempt from B5).
+  // or match-case body tuple, exempt from ↯/c.5.5).
   case class Pair
     ( openLine:        Int,
       openIdx:         Int,

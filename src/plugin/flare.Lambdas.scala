@@ -37,7 +37,7 @@ import scala.collection.mutable
 import dotty.tools.dotc.ast.untpd
 import dotty.tools.dotc.util.SourceFile
 
-// D2 — lambda layout. Each `param => body` syntactic lambda (`untpd.Function`)
+// ↯/c.3.2 — lambda layout. Each `param => body` syntactic lambda (`untpd.Function`)
 // must use one of three forms depending on its layout and on whether the
 // parameter list is named or all-placeholder (`_`-only):
 //
@@ -49,7 +49,7 @@ import dotty.tools.dotc.util.SourceFile
 //
 // The extractor returns a `LambdaSite` per `Function` node along with the
 // detected syntactic form, classification, and a "last-on-line" flag. The
-// checker translates these into D2.1–D2.4 violations.
+// checker translates these into ↯/c.3.2.1–↯/c.3.2.4 violations.
 object Lambdas:
   enum Opener:
     case Paren, Brace, Colon, Unknown
@@ -110,7 +110,7 @@ object Lambdas:
 
     if !funSp.exists || !lamSp.exists then None
     else
-      // The opener relevant to D2 is the *immediate* wrapper of the
+      // The opener relevant to ↯/c.3.2 is the *immediate* wrapper of the
       // lambda — so for `f({ x => … })` we want `{`, not the outer `(`.
       // Scan backward from the function's start past whitespace; the
       // first non-whitespace character is the wrapper.
@@ -120,7 +120,7 @@ object Lambdas:
       else
         val arrowOffset = findArrow(content, lamSp.start, lamSp.end)
         val isPlaceholder = arrowOffset < 0
-        // An explicit `_ => …` (or `(_, _) => …`) is exempt from D2: the
+        // An explicit `_ => …` (or `(_, _) => …`) is exempt from ↯/c.3.2: the
         // author chose `_` as the parameter name to signal that the value
         // is unused, and that signal is independent of `(…)` / `{…}` /
         // `: …` choice. Detect by: the function HAS an explicit `=>` in

@@ -115,12 +115,17 @@ private def terseByDefault(using Environment): Boolean = Invoker.detect.terse
 
 private def width(using Environment): Int = Flare.columns
 
-// One grep-able line per finding.
+// One grep-able line per finding, its code labelled as in the rich report.
 private def terse(root: Text, findings: List[Report.Finding])(using Stdio): Unit =
   findings.each: (finding: Report.Finding) =>
     val level = if finding.error then t"error" else t"warning"
     val where = t"${Report.relative(root, finding.path)}:${finding.line}:${finding.column}"
-    Out.println(t"$where: $level: [${finding.rule}] ${finding.message}")
+    Out.println(t"$where: $level: ${finding.label} ${finding.message}")
+
+// A failure as a command reports it before it exits, labelled with the `variant`th variant of
+// `error` in `↯/f.23`: `flare: [↯/f.23.9] <message>`.
+private def failure(error: Int, variant: Int = 0)(message: Text)(using Stdio): Unit =
+  Out.println(t"flare: ${pyrocosm.Bolts(FlareBolts.client, error, variant).label} $message")
 
 // The words on the command line that are not flags or their operands.
 private def words(arguments: List[Argument]): List[Text] =
@@ -149,7 +154,8 @@ private def select(config: Workspace.Config, words: List[Text])
 
     case _ =>
       val names = config.profiles.map(_.name).join(t", ")
-      (Unset, words, t"the configuration defines several profiles ($names); name one")
+      val label = pyrocosm.Bolts(FlareBolts.client, 7, 1).label
+      (Unset, words, t"$label the configuration defines several profiles ($names); name one")
 
 // The client's command dispatch. The `@main` entry point and burdock's `externalize` wrapper live
 // alone in the `launcher` module (`src/launcher/flare_launcher.scala`), which depends on this
@@ -231,9 +237,10 @@ private def loaded(workspace: Workspace.Outcome)(using Stdio)
     case Workspace.Outcome.Loaded(config) => config
 
     case Workspace.Outcome.Missing =>
-      Out.println(t"flare: no .pyrocosm/flare/config.tel was found here or above")
+      failure(1, 1)(t"no .pyrocosm/flare/config.tel was found here or above")
       NoConfig
 
+    // Each error is labelled with its own code.
     case Workspace.Outcome.Invalid(file, errors) =>
       Out.println(t"flare: $file could not be used:")
       errors.each: (error: Text) => Out.println(t"  $error")
@@ -323,13 +330,15 @@ private def rules(workspace: Workspace.Outcome, words: List[Text])(using Stdio)
       case (profile: Workspace.Profile, _, _) =>
         val pluginConfig = config.pluginConfig(profile).config
 
+        // A rule of the style by its code, `↯/c.1.4`, as it is reported.
         List.from(Rules.style).each: (rule: flare.Rule) =>
           val state =
             if pluginConfig.omits(rule.id) then t"omitted"
             else if pluginConfig.strictly(rule.id) || pluginConfig.errors then t"error"
             else t"warn"
 
-          Out.println(t"${rule.id.tt}\t${rule.principle.toString.tt}\t${rule.phase.tt}\t$state")
+          val code = t"↯/${rule.id.tt}"
+          Out.println(t"$code\t${rule.principle.toString.tt}\t${rule.phase.tt}\t$state")
 
         config.rules.each: (rule: Workspace.Rule) =>
           val enforcement = profile.enforced.filter(_.rule == rule.name).head
@@ -376,7 +385,7 @@ private def metrics
 
           case _ =>
             val root = config.root
-            Out.println(t"flare: $root is not inside a git repository, so nothing can be recorded")
+            failure(9)(t"$root is not inside a git repository, so nothing can be recorded")
             NoRepository
 
       case _ => Tool.UsageError
@@ -399,14 +408,14 @@ private def showCensus(repository: Repository, namespace: Text, profile: Text, t
           Exit.Ok
 
         case _ =>
-          Out.println
-            ( t"flare: no census is recorded for `$target` (profile `$profile`) under " +
+          failure(10, 1)
+            ( t"no census is recorded for `$target` (profile `$profile`) under " +
               t"refs/notes/$namespace" )
 
           NotesFailed
 
     case _ =>
-      Out.println(t"flare: `$target` is not a commit or tree in this repository")
+      failure(10, 2)(t"`$target` is not a commit or tree in this repository")
       NotesFailed
 
 private def measure
@@ -473,9 +482,9 @@ private def measure
 
     if result.diagnostics.exists(_.error) then
       result.diagnostics.filter(_.error).each: (d: flare.Frontend.Diagnostic) =>
-        Out.println(t"${d.path}:${d.line}:${d.column}: error: ${d.message}")
+        Out.println(t"${d.path}:${d.line}:${d.column}: error: ${d.bolt.label} ${d.message}")
 
-      Out.println(t"flare: a source did not parse, so nothing was recorded")
+      failure(8)(t"a source did not parse, so nothing was recorded")
       ParseFailure
     else
       repository.inputTree(files) match
@@ -515,7 +524,7 @@ private def measure
                 Unset
 
             if treeOutcome == false || pointerOutcome == false then
-              Out.println(t"flare: the git notes could not be written")
+              failure(10, 3)(t"the git notes could not be written")
               NotesFailed
             else
               flare.Dashboard.measured()
@@ -539,7 +548,7 @@ private def measure
               Exit.Ok
 
         case _ =>
-          Out.println(t"flare: the input tree could not be written; is `git` on the PATH?")
+          failure(10, 4)(t"the input tree could not be written; is `git` on the PATH?")
           NotesFailed
 
 // `flare assess [<rule>…] [<profile>]`: the rules named, or every rule the profile lists under
@@ -575,8 +584,8 @@ private def assess
                   config.assessment(name).lay(Nil: List[Workspace.Assessment])(List(_))
 
           if rules.nil then
-            Out.println
-              ( t"flare: profile `${profile.name}` assesses nothing; name a rule, or add " +
+            failure(7, 2)
+              ( t"profile `${profile.name}` assesses nothing; name a rule, or add " +
                 t"`assess <rule>` to the profile" )
 
             Tool.UsageError
@@ -596,8 +605,8 @@ private def assess
                 statuses.filter(_ != Exit.Ok).head.or(Exit.Ok)
 
               case _ =>
-                Out.println
-                  ( t"flare: ${config.root} is not inside a git repository, so nothing can be " +
+                failure(9)
+                  ( t"${config.root} is not inside a git repository, so nothing can be " +
                     t"recorded" )
 
                 NoRepository
@@ -624,14 +633,14 @@ private def showAssessment(repository: Repository, rule: Workspace.Assessment, t
         case _ =>
           val namespace = Recording.namespace(rule.name)
 
-          Out.println
-            ( t"flare: no assessment for rule `${rule.name}` is recorded for `$target` under " +
+          failure(10, 5)
+            ( t"no assessment for rule `${rule.name}` is recorded for `$target` under " +
               t"refs/notes/$namespace" )
 
           NotesFailed
 
     case _ =>
-      Out.println(t"flare: `$target` is not a commit or tree in this repository")
+      failure(10, 2)(t"`$target` is not a commit or tree in this repository")
       NotesFailed
 
 // What assessing one rule can end with.
@@ -671,9 +680,10 @@ private def assessOne
 
               if !outcome.parseErrors.nil then
                 outcome.parseErrors.each: (d: flare.Frontend.Diagnostic) =>
-                  Out.println(t"${d.path}:${d.line}:${d.column}: error: ${d.message}")
+                  val label = d.bolt.label
+                  Out.println(t"${d.path}:${d.line}:${d.column}: error: $label ${d.message}")
 
-                Out.println(t"flare: a source did not parse, so nothing was recorded")
+                failure(8)(t"a source did not parse, so nothing was recorded")
                 ParseFailure
               else
                 if dryRun && outcome.scored.nil then
@@ -690,26 +700,25 @@ private def assessOne
 
                 outcome.recorded match
                   case false =>
-                    Out.println(t"flare: the git notes could not be written")
+                    failure(10, 3)(t"the git notes could not be written")
                     NotesFailed
 
                   case _ =>
                     if !dryRun && outcome.unjudged > 0 then AssessIncomplete else Exit.Ok
 
             case _ =>
-              Out.println
-                ( t"flare: no credential `${model.credential}` could be found; declare it in " +
+              failure(11, 3)
+                ( t"no credential `${model.credential}` could be found; declare it in " +
                   t"~/.config/pyrocosm/credentials.tel or set the conventional environment " +
                   t"variable" )
 
               Tool.NoCredential
 
         case _ =>
-          Out.println
-            ( t"flare: the rubric `${rule.rubric}` for rule `${rule.name}` could not be read" )
+          failure(11, 2)(t"the rubric `${rule.rubric}` for rule `${rule.name}` could not be read")
 
           ConfigError
 
     case _ =>
-      Out.println(t"flare: rule `${rule.name}` names model `${rule.model}`, which is not defined")
+      failure(11, 1)(t"rule `${rule.name}` names model `${rule.model}`, which is not defined")
       ConfigError

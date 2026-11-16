@@ -41,7 +41,7 @@ import dotty.tools.dotc.util.SourceFile
 object Extensions:
   // Collect the leaf names of every public method declared in a top-level
   // `extension` block. Such methods are re-exported into the umbrella package by their
-  // simple name (just like any other public member), so L5 needs the list
+  // simple name (just like any other public member), so ↯/c.8.5 needs the list
   // of names a component's export surface is expected to carry. Methods marked
   // `private`/`protected` — including qualified forms like `private[foo]`, which
   // carry a `privateWithin` but not always the bare `Private` flag — are

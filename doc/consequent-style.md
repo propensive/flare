@@ -15,16 +15,16 @@ because a break always means "this didn't fit". The conventions are not a
 list of unrelated preferences; each one derives from one of nine named
 principles, set out in Part I. Eight govern how code reads; the ninth,
 Soundness, governs what it claims about itself, and applies only to a
-project that has told the checker what its unsafe token is. Part II states every rule in full, grouped by
-the principle it derives from, citing its checker identity in `[F1]`
-form. Part III indexes every rule number. The appendices collect supporting
+project that has told the checker what its unsafe token is. Part II states
+every rule in full, grouped by the principle it derives from, citing its
+bolt code in `[↯/c.1.1]` form. Part III indexes every rule's code. The appendices collect supporting
 material: the operator precedence classes, the keyword-sequence grammar,
 the whitespace-insignificant interpolators, and guidance on where to place
 extension methods.
 
 ## Part I — The Principles
 
-### F — The Frame
+### `↯/c.1` — The Frame
 
 **One fixed canvas per file: the project's licence header first, `package`
 on the line after it, then one blank line; 100 columns, two-space even
@@ -50,10 +50,10 @@ package alpha        // always the line after the header (here, line 33)
 import beta.*   // content always starts at the same line
 ```
 
-Rules: [F1], [F2], [F3], [F4], [F5], [F6],
-[F7], [F8].
+Rules: [↯/c.1.1], [↯/c.1.2], [↯/c.1.3], [↯/c.1.4], [↯/c.1.5], [↯/c.1.6],
+[↯/c.1.7], [↯/c.1.8].
 
-### A — Anchoring
+### `↯/c.2` — Anchoring
 
 **Every substructure has an anchor: the leftmost character of the token
 that opens it, extended leftward to the line's leading declaration keyword
@@ -74,11 +74,11 @@ then x
 else -x
 ```
 
-Rules: [A5], [A1], [A6], [A2.1], [A2.2],
-[A3], [A4], [A7], [A8], and the quote/splice layout
-family [A9.1]–[A9.6].
+Rules: [↯/c.2.5], [↯/c.2.1], [↯/c.2.6], [↯/c.2.2.1], [↯/c.2.2.2],
+[↯/c.2.3], [↯/c.2.4], [↯/c.2.7], [↯/c.2.8], and the quote/splice layout
+family [↯/c.2.9.1]–[↯/c.2.9.6].
 
-### D — Density
+### `↯/c.3` — Density
 
 **Fit decides form: the most compact compliant layout that fits is the only
 correct one. A break always means "didn't fit", and cascades run forward
@@ -95,10 +95,10 @@ exempt: their verticality is their structure, not a response to width.
 The choice among a construct's forms is likewise forced by fit, never by
 taste: a definition is single-line if it fits, multi-line if only the
 signature fits, heavy only when the signature itself does not fit; a lambda's
-bracketing is decided by its shape ([D2]); a closing bracket never takes
-a line of its own ([B4]); a keyword sequence keeps every keyword inline
-when the whole fits ([A2]); import groups appear in one fixed order
-([L1]).
+bracketing is decided by its shape ([↯/c.3.2]); a closing bracket never takes
+a line of its own ([↯/c.5.4]); a keyword sequence keeps every keyword inline
+when the whole fits ([↯/c.2.2]); import groups appear in one fixed order
+([↯/c.8.1]).
 
 ```scala
 def keys: Set[node] = edgeMap.keySet        // fits — must be one line
@@ -106,10 +106,10 @@ def keys: Set[node] = edgeMap.keySet        // fits — must be one line
 if x > 0 then x else -x                     // fits — must not be broken
 ```
 
-Rules: [D1], [D2]; and the canonical break order (§"The canonical
+Rules: [↯/c.3.1], [↯/c.3.2]; and the canonical break order (§"The canonical
 break order" in Part II), which is normative but not yet checker-enforced.
 
-### C — Continuation Marking
+### `↯/c.4` — Continuation Marking
 
 **A continuation line is distinguishable at its left margin.** Every line
 that continues a construct rather than starting one carries a mark a reader
@@ -132,10 +132,10 @@ left ++
   right                 // operator trails: a `++`-ended line cannot be complete
 ```
 
-Rules: [C1], [C2], [C3]; the inner-space mark is shared with
-[B4]/[B5] (B), and the quote-body indent [A6] participates.
+Rules: [↯/c.4.1], [↯/c.4.2], [↯/c.4.3]; the inner-space mark is shared with
+[↯/c.5.4]/[↯/c.5.5] (Balance), and the quote-body indent [↯/c.2.6] participates.
 
-### B — Balance
+### `↯/c.5` — Balance
 
 **What is syntactically paired is typographically mirrored.** Brackets take
 inner spaces on both sides or neither; an operator's two sides carry equal
@@ -149,20 +149,20 @@ its minimal analogue — one space — or the token would visually attach to one
 operand. From this single sentence, two rules fall out:
 
 - A trailing infix operator is preceded by exactly one space: `left ++⏎`,
-  never `left++⏎` — the break after demands the space before ([C2.3]).
+  never `left++⏎` — the break after demands the space before ([↯/c.4.2.3]).
   This holds even for operators legally written tight (`a++b`) when inline.
 - A leading chain dot is followed by exactly one space: `. method`, never
-  `.method` — the break before demands the space after ([C1]).
+  `.method` — the break before demands the space after ([↯/c.4.1]).
 
 This derivation is the clearest example of the style's design: neither
 spelling is an arbitrary house quirk; both are the same principle applied to
 the two legal sides of a break.
 
-Rules: [B1], [B2], [B3], [B4], [B5]; it grounds
-[C2.3] and the `. method` spelling of [C1], and the closer alignment
-of [A8].
+Rules: [↯/c.5.1], [↯/c.5.2], [↯/c.5.3], [↯/c.5.4], [↯/c.5.5]; it grounds
+[↯/c.4.2.3] and the `. method` spelling of [↯/c.4.1], and the closer alignment
+of [↯/c.2.8].
 
-### P — Proximity
+### `↯/c.6` — Proximity
 
 **Spacing encodes binding: gap size is monotone in binding looseness.** The
 gap scale runs `none < space < newline < blank line < two blank lines`, and
@@ -181,11 +181,11 @@ def slug: String = name.toLowerCase.replace(' ', '-')
 def id: String = slug
 ```
 
-Rules: [P2], [P3], [P4], [P5], [P6], [P1]; the
-precedence-monotone side of [B1] (B) and the import-group separation
-[L1.3] (L) express the same scale.
+Rules: [↯/c.6.2], [↯/c.6.3], [↯/c.6.4], [↯/c.6.5], [↯/c.6.6], [↯/c.6.1]; the
+precedence-monotone side of [↯/c.5.1] (Balance) and the import-group separation
+[↯/c.8.1.3] (Locatability) express the same scale.
 
-### T — Tabulation
+### `↯/c.7` — Tabulation
 
 **Adjacent lines instancing one schema align corresponding tokens in
 columns.** When consecutive lines are instances of the same shape — the
@@ -199,10 +199,10 @@ case CloneFailed        => "the repository could not be cloned"
 case InvalidRepoPath    => "the repository path was not valid"
 ```
 
-Rules: [T1], [T2], [T3], and the alignment relaxation of
-[P1].
+Rules: [↯/c.7.1], [↯/c.7.2], [↯/c.7.3], and the alignment relaxation of
+[↯/c.6.1].
 
-### L — Locatability
+### `↯/c.8` — Locatability
 
 **One name, one home.** Everything is findable by knowing its name: a type
 lives in the file named after it; a companion object — the most-read API
@@ -212,9 +212,9 @@ name is re-exported to the project's umbrella package, so one import reaches
 everything; and prose documentation lives in `doc/`, not in doc-comments, so
 it has one home too.
 
-Rules: [L1], [L2], [L3], [L4], [L5], [F8.2].
+Rules: [↯/c.8.1], [↯/c.8.2], [↯/c.8.3], [↯/c.8.4], [↯/c.8.5], [↯/c.1.8.2].
 
-### S — Soundness
+### `↯/c.9` — Soundness
 
 **A name must not overstate or understate what it does.** Where a project
 concentrates its unsafe operations behind a token — a value a caller must
@@ -225,7 +225,7 @@ index of where the guarantees stop, which is what makes it worth reading.
 This principle is the only one about meaning rather than layout, and the
 only one a project must opt into, by naming its token.
 
-Rules: [S1].
+Rules: [↯/c.9.1].
 
 ### Retained freedoms
 
@@ -233,49 +233,49 @@ Everything not listed here is deterministic. The complete list of author
 discretion is:
 
 1. **Single-character operator spacing.** `a+b` and `a + b` are both legal;
-   the choice is expressive use of P (a tight spelling reads as tight
-   binding), bounded by B's symmetry, by same-precedence consistency, and
-   by precedence monotonicity ([B1]).
+   the choice is expressive use of Proximity (a tight spelling reads as tight
+   binding), bounded by Balance's symmetry, by same-precedence consistency, and
+   by precedence monotonicity ([↯/c.5.1]).
 2. **A single blank line between single-line siblings.** Two adjacent
    single-line definitions may sit flush or take one blank line between
-   them — expressive grouping on the P gap scale ([P2], [P3]).
-3. **Opt-in alignment padding.** Extra spaces after commas ([P1]) and
-   before a run of aligned `=` defaults ([B2]) may build tabular
-   columns, provided the alignment is consistent across the run (T).
+   them — expressive grouping on the Proximity gap scale ([↯/c.6.2], [↯/c.6.3]).
+3. **Opt-in alignment padding.** Extra spaces after commas ([↯/c.6.1]) and
+   before a run of aligned `=` defaults ([↯/c.5.2]) may build tabular
+   columns, provided the alignment is consistent across the run (Tabulation).
 
 ## Part II — Derived Rules
 
-### F — The Frame
+### `↯/c.1` — The Frame
 
-#### License header [F1]
+#### License header [↯/c.1.1]
 
 Every file begins with the project's canonical license header — a block of
 exactly *H* lines inside a single `/* … */` comment, identical in every
 file. Line 1 opens the block comment with `/*` and line *H* closes it with
 `*/`. Lines 1 to *H* are reserved for it. No exceptions.
 
-#### Package declaration [F2] [F3]
+#### Package declaration [↯/c.1.2] [↯/c.1.3]
 
 The line after the header is `package <module>` — a single identifier
 segment matching the module the file belongs to, with nothing else on the
-line [F2]. It is followed by a single blank line [F3].
+line [↯/c.1.2]. It is followed by a single blank line [↯/c.1.3].
 
-#### Line length [F4]
+#### Line length [↯/c.1.4]
 
 Hard limit: 100 columns. Lines that would exceed this must be broken; refer
-to the canonical break order (D) and the rules for heavy signatures (D)
-and chain continuation (C). Interior lines of multi-line triple-quoted
-strings are exempt: their text is string content, governed by [A8] for
+to the canonical break order (Density) and the rules for heavy signatures (Density)
+and chain continuation (Continuation Marking). Interior lines of multi-line triple-quoted
+strings are exempt: their text is string content, governed by [↯/c.2.8] for
 the layout interpolators and significant data for the rest.
 
-#### Indentation [F5] [F6]
+#### Indentation [↯/c.1.5] [↯/c.1.6]
 
 Two spaces, no tabs, applied uniformly to every level of nesting and to
 every continuation line. Tab characters are forbidden anywhere in the file,
-including strings and comments [F5].
+including strings and comments [↯/c.1.5].
 
 The leading indent of every code line is an even number of columns
-[F6]. It is the **marker token** — the leading `.` of a chain
+[↯/c.1.6]. It is the **marker token** — the leading `.` of a chain
 continuation, the `=>` of a given continuation, the `:` of a heavy
 return-type line — that sits on the even-indent grid, not the padded
 payload that follows it: in `. filter(…)` the `.` occupies the even column
@@ -285,35 +285,35 @@ rows align under names from the opener line and may need an odd number of
 leading spaces.
 
 Scala 3's indented (colon) syntax is used everywhere that a choice exists;
-brace and paren lambda wrappers are prescribed by shape in [D2] (D),
+brace and paren lambda wrappers are prescribed by shape in [↯/c.3.2] (Density),
 whose table is authoritative.
 
-#### Trailing whitespace [F7]
+#### Trailing whitespace [↯/c.1.7]
 
 No trailing whitespace at the end of any line. Interior and closing lines
 of multi-line triple-quoted strings are exempt (their text is string
 content), as are whitespace-only lines.
 
-#### Block comments [F8]
+#### Block comments [↯/c.1.8]
 
 `/* … */` block comments are reserved for the license header
-[F8.1] — the frame owns the only block comment in the file. `/** … */`
-doc comments are never permitted [F8.2]: prose documentation lives in
-`doc/` markdown files (L).
+[↯/c.1.8.1] — the frame owns the only block comment in the file. `/** … */`
+doc comments are never permitted [↯/c.1.8.2]: prose documentation lives in
+`doc/` markdown files (Locatability).
 
 Line comments use `//` followed by exactly one space and then the comment
-text — the `//␣` gap is the P space that separates marker from content. A
+text — the `//␣` gap is the Proximity space that separates marker from content. A
 comment that pertains to a single line of code may sit at the end of that
 line; otherwise it sits on its own line directly above the code it
 describes, at the same indent.
 
-### A — Anchoring
+### `↯/c.2` — Anchoring
 
 #### The anchor
 
 An *indented scope* — the body of a colon-block (`recv:`), a `match`, a
 lambda or `case` arrow (`=>`), or a definition's `=` — must be indented
-exactly two columns beyond the scope's **anchor** [A5]. The anchor is
+exactly two columns beyond the scope's **anchor** [↯/c.2.5]. The anchor is
 the column of the construct that opens the scope, except it **extends
 leftwards** to the line's leading declaration keyword (`val`, `var`, `def`,
 `case`, `given`, after any modifiers) when that keyword shares the opener's
@@ -366,7 +366,7 @@ val x =
   else bar
 ```
 
-#### Maximum indent step [A1]
+#### Maximum indent step [↯/c.2.1]
 
 A non-blank code line cannot be indented more than two columns deeper than
 the previous code line. This forbids "alignment" indents that line up under
@@ -377,10 +377,10 @@ quote or splice context (`' {` or `$ {` as its trailing tokens), or the
 previous line is a chain method-application opener — beginning with `.` and
 ending with `:` or `=>` (e.g. `. within:` or `. map: x =>`). The rule
 suspends inside unclosed brackets from an earlier line, inside multi-line
-import selector lists, on lone `for`-filter rows (governed by [T3.3]),
-and on the first body line of an indented scope (governed by [A5]).
+import selector lists, on lone `for`-filter rows (governed by [↯/c.7.3.3]),
+and on the first body line of an indented scope (governed by [↯/c.2.5]).
 
-#### Keyword sequences [A2.1] [A2.2]
+#### Keyword sequences [↯/c.2.2.1] [↯/c.2.2.2]
 
 A "keyword sequence" is a multi-word control-flow construct whose keywords
 appear in a fixed order with bodies between them: `if … then … else …`,
@@ -394,7 +394,7 @@ character of K₁; when K₁ is preceded by modifiers (`inline`,
 `transparent inline`), the anchor moves to the leftmost modifier, so all
 alignment is measured from the visual start of the construct.
 
-**Placement rule** [A2.1]. For a chain with anchor (line `L`, column
+**Placement rule** [↯/c.2.2.1]. For a chain with anchor (line `L`, column
 `C`), each subsequent keyword Kᵢ (i ≥ 2) is placed in exactly one of two
 ways:
 
@@ -406,9 +406,9 @@ single break point: keywords before it sit on line `L`; keywords from it
 onwards each sit on their own new line in column `C`. In particular, `then`
 and `else` may share a line only if that line is also the anchor line —
 once `then` is on its own line, `else` must be too. The compact form
-(every Kᵢ inline) is required whenever it fits within the line length (D).
+(every Kᵢ inline) is required whenever it fits within the line length (Density).
 
-**Body cascade** [A2.2]. Bodies Bᵢ for i ≥ 2 are placed in one of two
+**Body cascade** [↯/c.2.2.2]. Bodies Bᵢ for i ≥ 2 are placed in one of two
 ways:
 
 - **inline** — Bᵢ starts on the same line as Kᵢ; or
@@ -424,7 +424,7 @@ Both cascades fire forward only — a break in Kᵢ does not retroactively
 require K₁…Kᵢ₋₁ to break. Keyword and body cascades are independent.
 Accepted and rejected examples are gathered in Appendix B.
 
-#### Type-annotation anchor [A3]
+#### Type-annotation anchor [↯/c.2.3]
 
 A definition's type-annotation `:` must either sit on the same line as the
 keyword that introduces the definition, or, when it breaks onto its own
@@ -433,10 +433,10 @@ leading modifier (or the keyword itself if there is no modifier) — the `d`
 of `def`, the `p` of `private val`, the `i` of `inline def`. The rule
 applies uniformly to `val`, `var`, `lazy val`, `def`, and `given`
 declarations. This is the anchor-point concept applied to the
-return-type line of a heavy signature (D), which is written
-`:   ReturnType =` with the hard space of [C3] (C).
+return-type line of a heavy signature (Density), which is written
+`:   ReturnType =` with the hard space of [↯/c.4.3] (Continuation Marking).
 
-#### Anchor of a heavy argument block [A4]
+#### Anchor of a heavy argument block [↯/c.2.4]
 
 When a line begins (after indentation) with `(` or `[`, the **previous line
 must be a tight expression**. A *tight expression* is one that does not
@@ -492,13 +492,13 @@ governed by the heavy-signature shape (D). A line whose leading `(`/`[`
 group is immediately followed by `=>` is a lambda parameter list, also
 exempt.
 
-#### Signature `=` placement [A6]
+#### Signature `=` placement [↯/c.2.6]
 
 When a `def` or `given` signature spans more than one line, the
 body-introducing `=` must be the last token on the final signature line, so
 the body begins on a fresh line.
 
-#### `given` continuation alignment [A7]
+#### `given` continuation alignment [↯/c.2.7]
 
 Continuation lines of a multi-line `given` signature that begin with `=>`
 must align vertically with the leading modifier or `given` keyword on the
@@ -517,10 +517,10 @@ given combinable: [context   <: Context,
 ```
 
 The `=>  ` at the start of each continuation carries the hard space of
-[C3] (C); the `<:` alignment across the type-parameter rows is T
-tabulation.
+[↯/c.4.3] (Continuation Marking); the `<:` alignment across the type-parameter rows is
+Tabulation.
 
-#### Multi-line interpolated strings [A8]
+#### Multi-line interpolated strings [↯/c.2.8]
 
 The interpolators whose leading and trailing whitespace is *insignificant* —
 `m` (messages), `j` (JSON), `x` (XML), `y` (YAML) and `tel` (TEL); see
@@ -528,14 +528,14 @@ Appendix C — lay a multi-line `"""…"""` string out as a block anchored to
 the opening prefix:
 
 1. the opening quotes end their line — the content begins on the *next*
-   line [A8.1];
+   line [↯/c.2.8.1];
 2. the content is indented two columns beyond the opening prefix
-   [A8.2];
+   [↯/c.2.8.2];
 3. no content line is indented less than the first content line
-   [A8.3];
+   [↯/c.2.8.3];
 4. the closing `"""` sits alone on its line, in the same column as the
-   opening prefix [A8.4] — the closer mirroring the opener's column is
-   B balance.
+   opening prefix [↯/c.2.8.4] — the closer mirroring the opener's column is
+   Balance.
 
 ```scala
 def document =
@@ -562,7 +562,7 @@ not affect the result. Every other interpolator (`t`, `s`, `sh`, …) and raw
 is left entirely to the author — and the line-length and trailing-whitespace
 rules do not apply to the interior of any multi-line string.
 
-#### Macro quotes and splices [A9.1]–[A9.6]
+#### Macro quotes and splices [↯/c.2.9.1]–[↯/c.2.9.6]
 
 A quoted or spliced block is an indented scope like any other, and its
 layout is the anchor discipline applied to the `'`/`$` opener. The rules of
@@ -575,7 +575,7 @@ has two layouts:
 - **Inline** — closer on the same source line as the opener. No space
   between `'` (or `$`) and the opening `{`/`[`, and no space
   immediately inside the opening or before the closing bracket
-  [A9.6]:
+  [↯/c.2.9.6]:
 
   ```scala
   '{Quantity(left)}
@@ -586,17 +586,17 @@ has two layouts:
   layout is fixed:
 
   1. **Space between `'`/`$` and `{`.** The opener is two tokens,
-     written `' {` (or `$ {`) [A9.2].
+     written `' {` (or `$ {`) [↯/c.2.9.2].
   2. **The opener pair is alone on its line.** Only indentation
-     before `'`/`$`; only whitespace (or EOL) after `{` [A9.3].
+     before `'`/`$`; only whitespace (or EOL) after `{` [↯/c.2.9.3].
   3. **Body indented to column `{`+2.** Every body line that begins
      a top-level statement of the quoted block sits two columns past
      the `{` column (equivalently four past the `'`/`$`). Sub-
      expressions within the body deepen further by the usual rules
-     [A9.4].
+     [↯/c.2.9.4].
   4. **`}` alone on its line at column `{`.** The closing brace
      occupies its own line and sits in the same column as the
-     opening `{` [A9.1] [A9.5].
+     opening `{` [↯/c.2.9.1] [↯/c.2.9.5].
 
   ```scala
   ' {
@@ -617,14 +617,14 @@ line layout applies.
 
 Quoted references (`'identifier`) take no padding.
 
-### D — Density
+### `↯/c.3` — Density
 
-#### The necessity rule [D1]
+#### The necessity rule [↯/c.3.1]
 
 A construct spread over several source lines whose one-line rendering would
 fit within 100 columns is a violation: a break must always mean "didn't
 fit". This is the principle's direct enforcement — where the other density
-rules prescribe *which* compact form to use, [D1] forbids breaking at
+rules prescribe *which* compact form to use, [↯/c.3.1] forbids breaking at
 all when no break is needed.
 
 **Scope (v1).** Three high-confidence families of construct are checked:
@@ -640,7 +640,7 @@ The one-line width is measured by collapsing every whitespace run outside
 string literals to a single space, counting the code already to the left
 and right of the construct on its first and last lines, and — for a
 paren-wrapped named lambda — charging the two extra columns of the `{ … }`
-form that [D2.1] would require. When an outer flagged construct
+form that [↯/c.3.2.1] would require. When an outer flagged construct
 contains an inner one, only the outermost is reported.
 
 **Bail-outs (deliberate conservatism).** A site is never flagged when its
@@ -680,12 +680,12 @@ A heavy signature has, in order:
    list if it fits there).
 2. Each subsequent parameter list on its own line, indented 2 spaces, with
    a single space inside each parenthesis: `( name: Type, … )`
-   ([B4], B).
+   ([↯/c.5.4], Balance).
 3. The return-type colon line, anchored to the column of the leftmost
-   keyword that introduces the definition ([A3], A), written
-   `:   ReturnType =` with the three-space hard space ([C3], C). The
-   `=` ends the line ([A6], A).
-4. A blank line ([P4], P).
+   keyword that introduces the definition ([↯/c.2.3], Anchoring), written
+   `:   ReturnType =` with the three-space hard space ([↯/c.4.3], Continuation Marking). The
+   `=` ends the line ([↯/c.2.6], Anchoring).
+4. A blank line ([↯/c.6.4], P).
 5. The body, indented 2 spaces from the `def`.
 
 Example:
@@ -734,14 +734,14 @@ Methods inside an extension block follow the same single/multi/heavy rules
 as ordinary `def`s.
 
 An annotation appears on the line directly above the declaration it
-annotates, flush-left with that declaration ([P6], P):
+annotates, flush-left with that declaration ([↯/c.6.6], Proximity):
 
 ```scala
 @targetName("removeKey")
 infix def - (key: node): Dag[node] = Dag(edgeMap - key)
 ```
 
-#### Lambda forms [D2]
+#### Lambda forms [↯/c.3.2]
 
 A lambda's bracketing is decided by its shape. The following table is
 authoritative — where any prose elsewhere appears to permit a different
@@ -749,14 +749,14 @@ bracketing, this table governs:
 
 | Lambda shape                                | Required form            | Rule       |
 | ------------------------------------------- | ------------------------ | ---------- |
-| Multi-line (body on later lines)            | colon-arg `f: x => …`    | [D2.3] |
-| Anonymous (placeholder `_`)                 | parens `f(_.g)`          | [D2.4] |
-| Named, single-line, last thing on its line  | colon-arg `f: x => …`    | [D2.2] |
-| Named, single-line, mid-line                | braces `f { x => … }`    | [D2.1] |
+| Multi-line (body on later lines)            | colon-arg `f: x => …`    | [↯/c.3.2.3] |
+| Anonymous (placeholder `_`)                 | parens `f(_.g)`          | [↯/c.3.2.4] |
+| Named, single-line, last thing on its line  | colon-arg `f: x => …`    | [↯/c.3.2.2] |
+| Named, single-line, mid-line                | braces `f { x => … }`    | [↯/c.3.2.1] |
 
 So braces appear only for a short named-parameter lambda that is not the
 last thing on its line, e.g. `{ key => (key, dependencies(key)) }`, with
-single spaces inside the braces (a formal block, [B4]). The inline
+single spaces inside the braces (a formal block, [↯/c.5.4]). The inline
 arrow itself is written `x => …` or `(x, y) => …` with spaces around `=>`.
 Multi-line lambdas use indented syntax:
 
@@ -769,18 +769,18 @@ input =>
 #### The canonical break order
 
 When a line genuinely does not fit, it is broken at the **loosest-binding
-seam first** — the same precedence ordering that governs spacing (P)
+seam first** — the same precedence ordering that governs spacing (Proximity)
 governs breaking, since a line break is the top of the gap scale. The
 order, from first-choice seam to last:
 
 1. **Chain dot.** Break the method chain, moving `. method` continuations
-   onto their own lines ([C1]).
+   onto their own lines ([↯/c.4.1]).
 2. **Infix operator, loosest precedence class first.** Break at the
    lowest-precedence operator present (Appendix A), the operator trailing
-   ([C2]); only if the line still does not fit, break at the next
+   ([↯/c.4.2]); only if the line still does not fit, break at the next
    class up.
 3. **Argument block.** Move the parameter application to its own line as a
-   heavy `( … )` block ([A4], [B4]).
+   heavy `( … )` block ([↯/c.2.4], [↯/c.5.4]).
 4. **Heavy signature form.** For a declaration, fall back to the full
    heavy-signature shape.
 
@@ -819,7 +819,7 @@ foo.bar
 The same `( ... )` form is used for any parenthesised block that lives on
 its own line — heavy method signatures, anonymous given continuations,
 multi-line type-parameter blocks. The closing bracket sits on the same line
-as the last parameter; it is never alone on a line ([B4]).
+as the last parameter; it is never alone on a line ([↯/c.5.4]).
 
 The break order is normative, but it is stated with a caveat: it is the
 part of this specification most likely to evolve as more constructs are
@@ -827,19 +827,19 @@ catalogued, and it is not yet checker-enforced. When it changes, existing
 SN rules will not: they constrain what a broken form looks like, not which
 seam was chosen.
 
-### C — Continuation Marking
+### `↯/c.4` — Continuation Marking
 
-#### Chain continuation [C1]
+#### Chain continuation [↯/c.4.1]
 
 When a chain of method calls wraps to a new line, the continuation begins
-with `. method` — a leading dot followed by a single space (the B balance
+with `. method` — a leading dot followed by a single space (the Balance
 of the break before it) — at the same indent as the receiver. Whether a
 blank line precedes the dot is determined by the indent of the *immediately
 preceding* code line:
 
 - If the previous line is *more* indented than the `. method` line (i.e.
   the chain wrapped into a nested block), a blank line is required before
-  the dot [C1.1]:
+  the dot [↯/c.4.1.1]:
 
   ```scala
   edgeMap.flatMap:
@@ -850,7 +850,7 @@ preceding* code line:
   ```
 
 - If the previous line is at the *same* indent as the `. method` line
-  (the chain stayed flat), no blank line is permitted [C1.2]:
+  (the chain stayed flat), no blank line is permitted [↯/c.4.1.2]:
 
   ```scala
   source.lines
@@ -860,14 +860,14 @@ preceding* code line:
 
 This applies to every wrapped chain.
 
-#### Symbolic-operator continuation [C2]
+#### Symbolic-operator continuation [↯/c.4.2]
 
 When a symbolic infix operator (`++`, `&&`, `+`, `::`, `|`, …) joins two
 operands that fall on different source lines, the operator must terminate
-the first line [C2.1], preceded by exactly one space [C2.3] — the
-line break on its right balanced by a single space on its left (B) — and
+the first line [↯/c.4.2.1], preceded by exactly one space [↯/c.4.2.3] — the
+line break on its right balanced by a single space on its left (Balance) — and
 the continuation must be indented two columns beyond the line on which the
-left operand begins [C2.2]:
+left operand begins [↯/c.4.2.2]:
 
 ```scala
 left ++
@@ -893,7 +893,7 @@ left ++
     right          // wrong — continuation indented +4, not +2
 ```
 
-The one-space requirement of [C2.3] applies even to operators legally
+The one-space requirement of [↯/c.4.2.3] applies even to operators legally
 written tight when inline: `a++b` is fine on one line, but the moment the
 operator trails a break it must read `a ++⏎`.
 
@@ -911,9 +911,9 @@ operators (`A | B`, `A & B`, `A *: B`). It does **not** apply to word-named
 infix operators (`min`, `max`, or any the project defines), to pattern
 alternatives
 (`case A | B`), or to `.` method selection — wrapped method chains follow
-[C1] above.
+[↯/c.4.1] above.
 
-#### Hard spaces [C3]
+#### Hard spaces [↯/c.4.3]
 
 When a short marker token starts a continuation line — `=>` in a given
 continuation, or the return-type `:` of a heavy signature — it is followed
@@ -924,15 +924,15 @@ two steps past the marker's column:
 - `=>  ` (two trailing spaces): `=>` is 2 columns + 2 spaces = 4.
 - `:   ` (three trailing spaces): `:` is 1 column + 3 spaces = 4.
 
-The marker itself sits on the even-indent grid ([F6], F); the payload
+The marker itself sits on the even-indent grid ([↯/c.1.6], The Frame); the payload
 lands on the grid two steps later. The `:   Type =` form is the practical
 one to remember: **three spaces between the leading `:` and the return type
 on a heavy-signature return-type line.** (The general rule elsewhere is one
 space after `:`.)
 
-### B — Balance
+### `↯/c.5` — Balance
 
-#### Operator spacing [B1]
+#### Operator spacing [↯/c.5.1]
 
 Every operator must have either zero spaces or exactly one space on each
 side. Within those choices, four constraints apply:
@@ -949,7 +949,7 @@ side. Within those choices, four constraints apply:
 4. **Precedence ordering.** Higher-precedence operators must never have
    more spacing than lower-precedence operators in the same
    unparenthesised expression. Tighter binding reads as tighter spacing
-   (P).
+   (Proximity).
 
 The precedence classes are listed in Appendix A.
 
@@ -973,12 +973,12 @@ as `of`, `in`, `by` or `to` is the usual case — follow the same rule as
 letter-named operators (precedence 1): because they are multi-character, they
 must always be spaced.
 
-#### Assignment spacing [B2]
+#### Assignment spacing [↯/c.5.2]
 
 Assignment and mutation operators (`=`, `+=`, `-=`, …) require *at least*
 one space before and *exactly* one space after, when the right-hand side
-appears on the same line. The "at least one before" admits the T
-tabulation of `=`s in aligned parameter-default rows:
+appears on the same line. The "at least one before" admits the
+Tabulation of `=`s in aligned parameter-default rows:
 
 ```scala
 ( mode:  Mode              = Mode(),
@@ -986,7 +986,7 @@ tabulation of `=`s in aligned parameter-default rows:
   group: Group             = Group(0) )
 ```
 
-#### Symbolic method names [B3]
+#### Symbolic method names [↯/c.5.3]
 
 When a method's name is a symbolic operator (`+`, `-`, `*`, `/`, `++`,
 etc.), a single space separates the operator from the following parameter
@@ -1001,25 +1001,25 @@ infix def * [rightMin <: Double, rightMax <: Double](right: rightMin ~ rightMax)
 Alphabetic method names follow the usual rule (no space before the
 parameter list).
 
-#### Bracket interiors: both or neither [B4] [B5]
+#### Bracket interiors: both or neither [↯/c.5.4] [↯/c.5.5]
 
 Bracket interiors are padded on both sides or on neither — mirrored,
 because the brackets are paired.
 
 A **formal block** — a `(…)`/`[…]` group functioning as a multi-line
 parameter or argument block — pads its interior: a single space directly
-inside both the opener and the closer, `( name: Type, … )` [B4]. Its
+inside both the opener and the closer, `( name: Type, … )` [↯/c.5.4]. Its
 closing bracket shares a line with the last parameter; it never stands
-alone on a line (D — the lone closer would spend a line on no content).
+alone on a line (Density — the lone closer would spend a line on no content).
 
 A **compact pair** — any single-line bracket group that is not a formal
-block — takes no interior padding: `(a, b)`, `Map[K, V]` [B5]. (Tuples
+block — takes no interior padding: `(a, b)`, `Map[K, V]` [↯/c.5.5]. (Tuples
 on a fresh line after `=>` — lambda and match-case body tuples — may use
 either tight or formal-style spacing.)
 
-One space follows every comma; no space precedes one ([P1], P).
+One space follows every comma; no space precedes one ([↯/c.6.1], Proximity).
 
-### P — Proximity
+### `↯/c.6` — Proximity
 
 #### The gap scale
 
@@ -1027,14 +1027,14 @@ Gap size is monotone in binding looseness: `none < space < newline <
 blank line < two blank lines`. Every rule in this section places a
 construct on that scale.
 
-#### Comma spacing [P1]
+#### Comma spacing [↯/c.6.1]
 
-No space is permitted before a comma [P1.1] — the comma binds to the
-item it follows — and exactly one space is required after it [P1.2],
-except where the extra spaces build a multi-row alignment column (T,
+No space is permitted before a comma [↯/c.6.1.1] — the comma binds to the
+item it follows — and exactly one space is required after it [↯/c.6.1.2],
+except where the extra spaces build a multi-row alignment column (Tabulation,
 "Comma-column alignment" below).
 
-#### Chunks [P2]
+#### Chunks [↯/c.6.2]
 
 A **chunk** is a statement (or expression at statement position) that
 spans two or more source lines. Chunks may contain blank lines in their
@@ -1067,10 +1067,10 @@ class Foo:
 ```
 
 The exception remains when the enclosing scope's signature is *heavy*:
-[P4] requires a blank line between the `:   ReturnType =` line and the
+[↯/c.6.4] requires a blank line between the `:   ReturnType =` line and the
 body, so the first member of a heavy scope is always preceded by a blank.
 
-#### Maximum blank lines [P3]
+#### Maximum blank lines [↯/c.6.3]
 
 At most **one** blank line is permitted anywhere, with a single exception:
 a run of up to **two** blank lines may sit immediately before the first
@@ -1079,31 +1079,31 @@ heavy signature (one whose signature includes a `:   ReturnType =` line).
 The two-blank gap is the top of the gap scale, and it marks the heaviest
 construct the style recognises — nothing else earns it.
 
-#### Blank line after a heavy return type [P4]
+#### Blank line after a heavy return type [↯/c.6.4]
 
 The return-type line of a heavy signature — beginning `:` + three spaces
 and ending with the body-introducing `=` — must be separated from the body
 that follows it by a blank line. The signature and the body are distinct
 in kind, and the blank line keeps that distinction visible.
 
-#### Import separation [P5]
+#### Import separation [↯/c.6.5]
 
 A blank line must separate the import region from the first declaration.
 (One blank line also separates the `package` declaration from the first
-import — that line is part of the frame, [F3].)
+import — that line is part of the frame, [↯/c.1.3].)
 
-#### Annotation adjacency [P6]
+#### Annotation adjacency [↯/c.6.6]
 
 An annotation sits directly above the declaration it annotates, with no
-blank line between them [P6.2] — zero gap, because the annotation
+blank line between them [↯/c.6.6.2] — zero gap, because the annotation
 binds to the declaration as tightly as a modifier does. An annotation
-must be followed by a declaration at all [P6.1]. The annotation is
-flush-left with the declaration it annotates — the same column, A's
+must be followed by a declaration at all [↯/c.6.6.1]. The annotation is
+flush-left with the declaration it annotates — the same column, Anchoring's
 anchor extended to the line above.
 
-### T — Tabulation
+### `↯/c.7` — Tabulation
 
-#### Case runs [T1]
+#### Case runs [↯/c.7.1]
 
 `match` appears on the same line as the scrutinee; cases are at +2 indent:
 
@@ -1130,7 +1130,7 @@ case CannotSwitchBranch => "the branch could not be changed"
 ```
 
 A case whose body wraps onto additional lines ends the run. A blank line
-separates the multi-line case from its neighbours ([P2]); cases that
+separates the multi-line case from its neighbours ([↯/c.6.2]); cases that
 follow a multi-line case start a fresh alignment run with their own
 column. The rule holds everywhere, in existing code and new.
 
@@ -1141,7 +1141,7 @@ line (never alone on its own line) and the body begins on a fresh line.
 (A case whose *guard* spans multiple lines is exempt: the parser needs the
 `=>` dedented below the indented guard.)
 
-#### `using`-clause alignment [T2]
+#### `using`-clause alignment [↯/c.7.2]
 
 Inside a multi-line `( using … )` clause, each fresh parameter row begins
 at the column of the clause's first parameter token — including any
@@ -1152,9 +1152,9 @@ example under D). A row is fresh iff the previous line ended with `,`,
 `(`, or `using`; otherwise the line is a wrapped continuation of the
 previous parameter's type, aligned intentionally to the type column.
 
-#### For-comprehension alignment [T3]
+#### For-comprehension alignment [↯/c.7.3]
 
-Single-line forms are preferred when they fit (D):
+Single-line forms are preferred when they fit (Density):
 
 ```scala
 for left <- elements; right <- elements
@@ -1167,7 +1167,7 @@ acceptable:
 - **Aligned-LHS style.** The first generator follows `for ` on the same
   line; subsequent generators are indented to put their LHS in the
   column of the first generator's LHS (4 columns past `for`). `yield`
-  / `do` align with `for` ([A2.1], A).
+  / `do` align with `for` ([↯/c.2.2.1], Anchoring).
 
   ```scala
   for x  <- xs
@@ -1190,16 +1190,16 @@ acceptable:
 In either layout, when more than one generator/binding/filter line
 appears:
 
-- All `<-` and `=` operators are vertically aligned [T3.1]. The LHS
+- All `<-` and `=` operators are vertically aligned [↯/c.7.3.1]. The LHS
   is right-padded with spaces as needed to make the columns match.
-- All generator/binding LHSs sit in the same column [T3.2].
+- All generator/binding LHSs sit in the same column [↯/c.7.3.2].
 - An `if` filter on its own line is placed in the column of the `<-`/`=`
-  operators, not in the LHS column [T3.3] — and is not separated
-  from the preceding enumerator by a blank line [T3.4]. A filter
+  operators, not in the LHS column [↯/c.7.3.3] — and is not separated
+  from the preceding enumerator by a blank line [↯/c.7.3.4]. A filter
   sharing a line with its generator (`x <- xs if cond`) is exempt from
   the column rule.
 
-#### Comma-column alignment [P1 relaxation]
+#### Comma-column alignment [↯/c.6.1 relaxation]
 
 When two or more consecutive lines align values into vertical columns by
 adding extra spaces after commas, the extra spaces are permitted:
@@ -1215,13 +1215,13 @@ alignment pattern — a run — and the alignment must be consistent across
 the run; an isolated line with extra spaces after a comma is still a
 violation.
 
-### L — Locatability
+### `↯/c.8` — Locatability
 
-#### Imports [L1]
+#### Imports [↯/c.8.1]
 
-Imports are grouped, with one blank line between groups ([L1.3], the
-P gap scale applied to import regions) and alphabetical ordering within
-each group ([L1.2]). The groups appear in this order:
+Imports are grouped, with one blank line between groups ([↯/c.8.1.3], the
+Proximity gap scale applied to import regions) and alphabetical ordering within
+each group ([↯/c.8.1.2]). The groups appear in this order:
 
 1. `language.*` (and other `import language.…` directives)
 2. `java.*` and `javax.*`
@@ -1236,7 +1236,7 @@ imports. Within the project-family group, wildcard imports and named
 imports (`import filesystemOptions.readAccess`, `import AsyncError.Reason`)
 may interleave as the code requires.
 
-Project-family imports must not introduce aliases [L1.1]. Both
+Project-family imports must not introduce aliases [↯/c.8.1.1]. Both
 `import x.y as z` (Scala 3) and `import x.{y => z}` (Scala 2 style) are
 forbidden for group-5 imports — write the full path instead, so the name
 in code is the name at its definition. Standard-library and JDK aliases
@@ -1244,7 +1244,7 @@ in code is the name at its definition. Standard-library and JDK aliases
 as juc`) remain an established convention, and aliasing inside a `using`
 clause or a method body is unaffected.
 
-#### File naming [L2]
+#### File naming [↯/c.8.2]
 
 A module's source files follow these patterns:
 
@@ -1261,37 +1261,37 @@ A module's source files follow these patterns:
   objects layered to satisfy compile-time ordering of givens. The prefixes
   denote successively earlier layers in the resolution order.
 
-#### Companion ordering [L3]
+#### Companion ordering [↯/c.8.3]
 
 When a type and its companion appear in the same file, place the companion
 `object` _before_ the type definition. Cross-companion references are
 resolved at use-site, so this ordering keeps the more frequently-read API
 surface at the top of the file.
 
-#### Umbrella re-exports [L4] [L5]
+#### Umbrella re-exports [↯/c.8.4] [↯/c.8.5]
 
 A project may define an *umbrella package*: a single package that
 re-exports every public name, so that one wildcard import reaches
 everything. Where it does, every public module in a component — a top-level
 definition living in its own `<component>.<Name>.scala` file, other than
 `internal` modules — must be re-exported into the umbrella package by its
-export surface [L4], and every public top-level extension method
-likewise by its leaf name [L5] (unless marked `@unexported`).
+export surface [↯/c.8.4], and every public top-level extension method
+likewise by its leaf name [↯/c.8.5] (unless marked `@unexported`).
 
-#### Documentation [F8.2]
+#### Documentation [↯/c.1.8.2]
 
 Prose documentation lives in `doc/` markdown files, not in `/** … */`
 doc-comments. Documentation has one home, findable without opening source
 files, and source files carry only code and `//` comments.
 
-### S — Soundness
+### `↯/c.9` — Soundness
 
-#### Unsafe naming [S1]
+#### Unsafe naming [↯/c.9.1]
 
 A project may nominate an *unsafe token*: a type whose presence as a
 `using` parameter marks a definition as bypassing a guarantee. Where it
 does, a method that takes the token must be named with an `unsafe` prefix
-[S1.1], and a method so named must take the token [S1.2]. The prefix is a
+[↯/c.9.1.1], and a method so named must take the token [↯/c.9.1.2]. The prefix is a
 whole word — `unsafe` alone, or `unsafe` followed by an uppercase letter — so
 the block that supplies the token, conventionally `unsafely`, is not itself
 covered.
@@ -1306,59 +1306,60 @@ decided is legible from the name.
 
 ## Part III — Rule Index
 
-Every rule enforced by the Consequent checker, its section in Part II, and
-the principle it derives from. Sub-rules (`A2.1`, `A9.3`) are documented with their family.
+Every rule enforced by the Consequent checker, by its bolt code, with its
+section in Part II and the principle it derives from. The distinct failures of
+a rule (`↯/c.2.2.1`, `↯/c.2.9.3`) are documented with it.
 
 | Rule | Part II section | Principle |
 | --- | --- | --- |
-| [`F1`](rules/F1.md) | License header | F — The Frame |
-| [`F2`](rules/F2.md) | Package declaration | F — The Frame |
-| [`F3`](rules/F3.md) | Package declaration | F — The Frame |
-| [`F4`](rules/F4.md) | Line length | F — The Frame |
-| [`F5`](rules/F5.md) | Indentation | F — The Frame |
-| [`F6`](rules/F6.md) | Indentation | F — The Frame |
-| [`F7`](rules/F7.md) | Trailing whitespace | F — The Frame |
-| [`F8`](rules/F8.md) | Block comments | F — The Frame |
-| [`A1`](rules/A1.md) | Maximum indent step | A — Anchoring |
-| [`A2`](rules/A2.md) | Keyword sequences | A — Anchoring |
-| [`A3`](rules/A3.md) | Type-annotation anchor | A — Anchoring |
-| [`A4`](rules/A4.md) | Anchor of a heavy argument block | A — Anchoring |
-| [`A5`](rules/A5.md) | The anchor | A — Anchoring |
-| [`A6`](rules/A6.md) | Signature `=` placement | A — Anchoring |
-| [`A7`](rules/A7.md) | `given` continuation alignment | A — Anchoring |
-| [`A8`](rules/A8.md) | Multi-line interpolated strings | A — Anchoring |
-| [`A9`](rules/A9.md) | Macro quotes and splices | A — Anchoring |
-| [`D1`](rules/D1.md) | The necessity rule | D — Density |
-| [`D2`](rules/D2.md) | Lambda forms | D — Density |
-| [`C1`](rules/C1.md) | Chain continuation | C — Continuation Marking |
-| [`C2`](rules/C2.md) | Symbolic-operator continuation | C — Continuation Marking |
-| [`C3`](rules/C3.md) | Hard spaces | C — Continuation Marking |
-| [`B1`](rules/B1.md) | Operator spacing | B — Balance |
-| [`B2`](rules/B2.md) | Assignment spacing | B — Balance |
-| [`B3`](rules/B3.md) | Symbolic method names | B — Balance |
-| [`B4`](rules/B4.md) | Bracket interiors: both or neither | B — Balance |
-| [`B5`](rules/B5.md) | Bracket interiors: both or neither | B — Balance |
-| [`P1`](rules/P1.md) | Comma spacing | P — Proximity |
-| [`P2`](rules/P2.md) | Chunks | P — Proximity |
-| [`P3`](rules/P3.md) | Maximum blank lines | P — Proximity |
-| [`P4`](rules/P4.md) | Blank line after a heavy return type | P — Proximity |
-| [`P5`](rules/P5.md) | Import separation | P — Proximity |
-| [`P6`](rules/P6.md) | Annotation adjacency | P — Proximity |
-| [`T1`](rules/T1.md) | Case runs | T — Tabulation |
-| [`T2`](rules/T2.md) | `using`-clause alignment | T — Tabulation |
-| [`T3`](rules/T3.md) | For-comprehension alignment | T — Tabulation |
-| [`L1`](rules/L1.md) | Imports | L — Locatability |
-| [`L2`](rules/L2.md) | File naming | L — Locatability |
-| [`L3`](rules/L3.md) | Companion ordering | L — Locatability |
-| [`L4`](rules/L4.md) | Umbrella re-exports | L — Locatability |
-| [`L5`](rules/L5.md) | Umbrella re-exports | L — Locatability |
-| [`S1`](rules/S1.md) | Unsafe naming | S — Soundness |
+| [`↯/c.1.1`](rules/c.1.1.md) | License header | `↯/c.1` — The Frame |
+| [`↯/c.1.2`](rules/c.1.2.md) | Package declaration | `↯/c.1` — The Frame |
+| [`↯/c.1.3`](rules/c.1.3.md) | Package declaration | `↯/c.1` — The Frame |
+| [`↯/c.1.4`](rules/c.1.4.md) | Line length | `↯/c.1` — The Frame |
+| [`↯/c.1.5`](rules/c.1.5.md) | Indentation | `↯/c.1` — The Frame |
+| [`↯/c.1.6`](rules/c.1.6.md) | Indentation | `↯/c.1` — The Frame |
+| [`↯/c.1.7`](rules/c.1.7.md) | Trailing whitespace | `↯/c.1` — The Frame |
+| [`↯/c.1.8`](rules/c.1.8.md) | Block comments | `↯/c.1` — The Frame |
+| [`↯/c.2.1`](rules/c.2.1.md) | Maximum indent step | `↯/c.2` — Anchoring |
+| [`↯/c.2.2`](rules/c.2.2.md) | Keyword sequences | `↯/c.2` — Anchoring |
+| [`↯/c.2.3`](rules/c.2.3.md) | Type-annotation anchor | `↯/c.2` — Anchoring |
+| [`↯/c.2.4`](rules/c.2.4.md) | Anchor of a heavy argument block | `↯/c.2` — Anchoring |
+| [`↯/c.2.5`](rules/c.2.5.md) | The anchor | `↯/c.2` — Anchoring |
+| [`↯/c.2.6`](rules/c.2.6.md) | Signature `=` placement | `↯/c.2` — Anchoring |
+| [`↯/c.2.7`](rules/c.2.7.md) | `given` continuation alignment | `↯/c.2` — Anchoring |
+| [`↯/c.2.8`](rules/c.2.8.md) | Multi-line interpolated strings | `↯/c.2` — Anchoring |
+| [`↯/c.2.9`](rules/c.2.9.md) | Macro quotes and splices | `↯/c.2` — Anchoring |
+| [`↯/c.3.1`](rules/c.3.1.md) | The necessity rule | `↯/c.3` — Density |
+| [`↯/c.3.2`](rules/c.3.2.md) | Lambda forms | `↯/c.3` — Density |
+| [`↯/c.4.1`](rules/c.4.1.md) | Chain continuation | `↯/c.4` — Continuation Marking |
+| [`↯/c.4.2`](rules/c.4.2.md) | Symbolic-operator continuation | `↯/c.4` — Continuation Marking |
+| [`↯/c.4.3`](rules/c.4.3.md) | Hard spaces | `↯/c.4` — Continuation Marking |
+| [`↯/c.5.1`](rules/c.5.1.md) | Operator spacing | `↯/c.5` — Balance |
+| [`↯/c.5.2`](rules/c.5.2.md) | Assignment spacing | `↯/c.5` — Balance |
+| [`↯/c.5.3`](rules/c.5.3.md) | Symbolic method names | `↯/c.5` — Balance |
+| [`↯/c.5.4`](rules/c.5.4.md) | Bracket interiors: both or neither | `↯/c.5` — Balance |
+| [`↯/c.5.5`](rules/c.5.5.md) | Bracket interiors: both or neither | `↯/c.5` — Balance |
+| [`↯/c.6.1`](rules/c.6.1.md) | Comma spacing | `↯/c.6` — Proximity |
+| [`↯/c.6.2`](rules/c.6.2.md) | Chunks | `↯/c.6` — Proximity |
+| [`↯/c.6.3`](rules/c.6.3.md) | Maximum blank lines | `↯/c.6` — Proximity |
+| [`↯/c.6.4`](rules/c.6.4.md) | Blank line after a heavy return type | `↯/c.6` — Proximity |
+| [`↯/c.6.5`](rules/c.6.5.md) | Import separation | `↯/c.6` — Proximity |
+| [`↯/c.6.6`](rules/c.6.6.md) | Annotation adjacency | `↯/c.6` — Proximity |
+| [`↯/c.7.1`](rules/c.7.1.md) | Case runs | `↯/c.7` — Tabulation |
+| [`↯/c.7.2`](rules/c.7.2.md) | `using`-clause alignment | `↯/c.7` — Tabulation |
+| [`↯/c.7.3`](rules/c.7.3.md) | For-comprehension alignment | `↯/c.7` — Tabulation |
+| [`↯/c.8.1`](rules/c.8.1.md) | Imports | `↯/c.8` — Locatability |
+| [`↯/c.8.2`](rules/c.8.2.md) | File naming | `↯/c.8` — Locatability |
+| [`↯/c.8.3`](rules/c.8.3.md) | Companion ordering | `↯/c.8` — Locatability |
+| [`↯/c.8.4`](rules/c.8.4.md) | Umbrella re-exports | `↯/c.8` — Locatability |
+| [`↯/c.8.5`](rules/c.8.5.md) | Umbrella re-exports | `↯/c.8` — Locatability |
+| [`↯/c.9.1`](rules/c.9.1.md) | Unsafe naming | `↯/c.9` — Soundness |
 
 ## Appendix A — Operator precedence classes
 
 Operator precedence (lowest to highest), classified by first character.
-The same classes order both spacing ([B1], P: looser binding, more
-space) and breaking (the canonical break order, D: looser binding, break
+The same classes order both spacing ([↯/c.5.1], Proximity: looser binding, more
+space) and breaking (the canonical break order, Density: looser binding, break
 first).
 
 1. letter-named operators (any alphanumeric infix name)
@@ -1383,7 +1384,7 @@ The recognised keyword sequences are:
 
 Each sequence has the shape `K₁ B₁ K₂ B₂ … Kₙ Bₙ` — keywords interleaved
 with bodies. The placement and cascade rules are stated under A in
-Part II ([A2.1], [A2.2]); this appendix defines the `else if`
+Part II ([↯/c.2.2.1], [↯/c.2.2.2]); this appendix defines the `else if`
 bridge and gathers the examples.
 
 ### `else if` bridges
@@ -1475,7 +1476,7 @@ such as JSON, XML or YAML is the usual case, because the whitespace is
 discarded by the parse.
 
 Because their whitespace is insignificant, their multi-line `"""…"""`
-literals can be — and must be — laid out as indented blocks ([A8], A). Every
+literals can be — and must be — laid out as indented blocks ([↯/c.2.8], Anchoring). Every
 other interpolator, and every raw `"""` string, carries significant
 whitespace, so the layout of its content is left entirely to the author, and
 the line-length and trailing-whitespace rules do not apply to the interior of
@@ -1551,8 +1552,8 @@ Two traps when moving an extension into a companion:
   grouped imports → blank → code.
 - Imports: fixed group order, alphabetical within group, no aliases for
   project-family libraries.
-- Indented (colon) syntax; lambda bracketing by the D2 table.
-- Anything that fits on one line goes on one line (D1); break at the
+- Indented (colon) syntax; lambda bracketing by the ↯/c.3.2 table.
+- Anything that fits on one line goes on one line (↯/c.3.1); break at the
   loosest-binding seam first.
 - Operator spacing: zero or one space, symmetric; zero only for
   single-character operators; same-precedence operators in one expression

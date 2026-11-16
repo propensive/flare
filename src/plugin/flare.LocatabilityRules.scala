@@ -37,10 +37,10 @@ import scala.collection.mutable
 import dotty.tools.dotc.ast.untpd
 
 object LocatabilityRules:
-  // L2: the file's name must match one of the documented conventions, and a
+  // ↯/c.8.2: the file's name must match one of the documented conventions, and a
   // `<module>.<Type>.scala` file must actually declare that top-level type.
   object FileNaming extends Rule:
-    def id: String = "L2"
+    def id: String = "c.8.2"
     def principle: Principle = Principle.Locatability
 
     def check(ctx: Context): List[Violation] =
@@ -67,7 +67,7 @@ object LocatabilityRules:
         if !ok then
           out +=
             Violation
-              ( file, 1, 1, "L2",
+              ( file, 1, 1, "c.8.2",
                 s"file name `$name` does not match a documented naming convention" )
         else
           // Patterns of the form `<lowercase>.<Uppercase>.scala` name a single
@@ -83,14 +83,14 @@ object LocatabilityRules:
             if !declaresTopLevel(ctx.tree, typeName) then
               out +=
                 Violation
-                  ( file, 1, 1, "L2",
+                  ( file, 1, 1, "c.8.2",
                     s"file name `$name` declares no top-level `$typeName` " +
                       "(class/trait/enum/object/type)" )
 
       out.toList
 
     // True iff the package body (or any nested package body) holds a `TypeDef`
-    // or `ModuleDef` whose name matches `target`. Used by L2 to verify that
+    // or `ModuleDef` whose name matches `target`. Used by ↯/c.8.2 to verify that
     // a `<module>.<Type>.scala` filename actually declares that type.
     private def declaresTopLevel(tree: untpd.Tree, target: String): Boolean =
       tree match
@@ -117,10 +117,10 @@ object LocatabilityRules:
         // <other-module>.<TypeName>
         prefix.headOption.exists(_.isLower)
 
-  // L3: a type's companion `object` — the most-read API surface — must
+  // ↯/c.8.3: a type's companion `object` — the most-read API surface — must
   // appear before the `class`/`trait`/`enum` it accompanies.
   object CompanionOrdering extends Rule:
-    def id: String = "L3"
+    def id: String = "c.8.3"
     def principle: Principle = Principle.Locatability
 
     def check(ctx: Context): List[Violation] =
@@ -132,12 +132,12 @@ object LocatabilityRules:
             val name = key._2
             out +=
               Violation
-                ( ctx.file, objLine, 1, "L3",
+                ( ctx.file, objLine, 1, "c.8.3",
                   s"object `$name` must appear before class/trait/enum `$name`" )
 
       out.toList
 
-  // L4: every public module in a component (a top-level definition living in
+  // ↯/c.8.4: every public module in a component (a top-level definition living in
   // its own `<component>.<Name>.scala` file, other than `internal` modules) must
   // be re-exported into the umbrella package. `siblingTypes` is the list of
   // such module names found alongside the `<umbrella>_<component>_<suffix>.scala`
@@ -145,7 +145,7 @@ object LocatabilityRules:
   // violation. The list is empty for every file other than an export surface, so
   // this check is a no-op elsewhere.
   object UmbrellaExportCompleteness extends Rule:
-    def id: String = "L4"
+    def id: String = "c.8.4"
     def principle: Principle = Principle.Locatability
 
     def check(ctx: Context): List[Violation] =
@@ -160,21 +160,21 @@ object LocatabilityRules:
 
         List
           ( Violation
-              ( ctx.file, ctx.umbrellaExports.firstLine, 1, "L4",
+              ( ctx.file, ctx.umbrellaExports.firstLine, 1, "c.8.4",
                 s"the $subject defined but not exported to the " +
                   s"`${ctx.config.umbrella.getOrElse("")}` package: $listed" ) )
       else
         Nil
 
-  // L5: every public top-level extension method in a component must, like
-  // its public modules (L4), be re-exported into the umbrella package by
+  // ↯/c.8.5: every public top-level extension method in a component must, like
+  // its public modules (↯/c.8.4), be re-exported into the umbrella package by
   // its leaf name. `siblingExtensions` is the list of such method names found in
   // the `<component>_<suffix>.scala` definition files alongside the export
   // surface; any name absent from the surface's `export` clauses (and not marked
   // `@unexported`) is a violation. The list is empty for every file other than an
   // export surface, so this check is a no-op elsewhere.
   object ExtensionExportCompleteness extends Rule:
-    def id: String = "L5"
+    def id: String = "c.8.5"
     def principle: Principle = Principle.Locatability
 
     def check(ctx: Context): List[Violation] =
@@ -189,7 +189,7 @@ object LocatabilityRules:
 
         List
           ( Violation
-              ( ctx.file, ctx.umbrellaExports.firstLine, 1, "L5",
+              ( ctx.file, ctx.umbrellaExports.firstLine, 1, "c.8.5",
                 s"the $subject defined but not exported to the " +
                   s"`${ctx.config.umbrella.getOrElse("")}` package: $listed" ) )
       else

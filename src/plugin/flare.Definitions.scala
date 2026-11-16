@@ -48,8 +48,8 @@ object Definitions:
   // explicit type ascription, and record (a) the column of the leftmost
   // non-whitespace token on the keyword's line — the "anchor", typically
   // a leading modifier or the keyword itself (`val`/`var`/`def`/`given`) —
-  // and (b) the position of the `:` that introduces the type. A3
-  // (A3) then requires the `:` to sit either on the anchor line or in
+  // and (b) the position of the `:` that introduces the type. ↯/c.2.3
+  // (↯/c.2.3) then requires the `:` to sit either on the anchor line or in
   // the anchor column on a fresh line.
   //
   // This is tree-driven so we don't need to maintain cross-line bracket-

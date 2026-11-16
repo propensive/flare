@@ -35,7 +35,7 @@ package flare
 // A gate: the type whose presence as a `using` parameter marks a definition as
 // bypassing a guarantee the compiler would otherwise enforce (Soundness's
 // `vacuous.Unsafe`, say), paired with the prefix such a definition's name must
-// carry. S1 checks each gate a project declares; a project with none has
+// carry. ↯/c.9.1 checks each gate a project declares; a project with none has
 // nothing for it to check.
 final case class Gate(token: String, prefix: String):
   // The token's simple name: `Unsafe` and `vacuous.Unsafe` are the same gate.
@@ -56,15 +56,14 @@ final case class Definition
     severity:   String          = "warn" )
 
 object Config:
-  // Does a `strict`/`omit` entry select this rule? An entry names either a rule
-  // — `S1`, which also covers its sub-rules `S1.1` and `S1.2` — or a principle
-  // letter, `S`, which covers every rule derived from it. Neither form matches
-  // a longer identifier that merely begins with it, so `S1` does not select
-  // `S12`. A project rule is selected only by its exact name.
-  def selects(prefix: String, rule: String): Boolean =
-    if prefix.forall(_.isLetter) && prefix.headOption.exists(_.isUpper)
-    then rule.startsWith(prefix) && rule.drop(prefix.length).headOption.exists(_.isDigit)
-    else rule == prefix || rule.startsWith(prefix+".")
+  // Does a `strict`/`omit` entry select this rule? An entry names a rule of the style by its
+  // code, without its `↯/` or with it: `c.9.1`, which also covers its variants `c.9.1.1` and
+  // `c.9.1.2`, or a principle, `c.9`, which covers every rule derived from it. The match is by
+  // whole components, so `c.1.1` does not select `c.1.12`. A project rule is selected only by
+  // its exact name.
+  def selects(entry: String, rule: String): Boolean =
+    val code = entry.stripPrefix("↯/")
+    rule == entry || Rules.styled(code) && (rule == code || rule.startsWith(code+"."))
 
   // Parse the plugin's `-P:flare:<option>` arguments. An option the plugin
   // does not recognise, or one whose value does not parse, is reported rather
@@ -78,12 +77,15 @@ object Config:
     var config = Config()
     val errors = List.newBuilder[String]
 
+    // A problem with the options, as the `variant`th variant of `↯/f.21.3`.
+    def fail(variant: Int, message: String): Unit = errors += FlareBolts.problem(variant, message)
+
     def int(key: String, value: String)(update: Int => Unit): Unit =
       value.toIntOption match
         case Some(n) if n >= 0 => update(n)
 
         case _ =>
-          errors += s"the `$key` option requires a non-negative integer, not `$value`"
+          fail(1, s"the `$key` option requires a non-negative integer, not `$value`")
 
     // A list-valued option's items. Both `,` and `;` separate, because the
     // compiler splits a `-P:plugin:key=a,b` argument on the comma before the
@@ -120,7 +122,7 @@ object Config:
           if value.isEmpty then config = config.copy(header = None)
           else readHeader(value) match
             case Some(lines) => config = config.copy(header = Some(lines))
-            case None        => errors += s"the header file `$value` could not be read"
+            case None        => fail(2, s"the header file `$value` could not be read")
 
         // `gate=Unsafe:unsafe`; the prefix defaults to the token's simple name
         // in lower case. Several gates may be given as one `;`-separated list.
@@ -146,12 +148,11 @@ object Config:
               define(name): d => d.copy(predicates = d.predicates :+ Predicate(kind, target))
 
             case List(name, kind, _) =>
-              errors +=
-                ( s"`$kind` is not a predicate; rule `$name` expects one of " +
-                  Predicates.kinds.mkString("`", "`, `", "`") )
+              val expected = Predicates.kinds.mkString("`", "`, `", "`")
+              fail(3, s"`$kind` is not a predicate; rule `$name` expects one of $expected")
 
             case _ =>
-              errors += s"the `rule` option requires `<name>:<predicate>:<target>`, not `$value`"
+              fail(4, s"the `rule` option requires `<name>:<predicate>:<target>`, not `$value`")
 
         // `enforce=cast` or `enforce=cast:error`.
         case "enforce" =>
@@ -164,22 +165,31 @@ object Config:
                 config = config.copy(enforced = config.enforced + (name -> None))
 
               case _ =>
-                errors +=
-                  s"the `enforce` option requires `<rule>` or `<rule>:<severity>`, not `$item`"
+                val expected = "`<rule>` or `<rule>:<severity>`"
+                fail(5, s"the `enforce` option requires $expected, not `$item`")
 
         case other =>
-          errors +=
-            ( s"`$other` is not a recognised option; expected one of `errors`, `header`, " +
-              "`columns`, `umbrella`, `moduleRoot`, `language`, `interpolators`, `gate`, " +
-              "`strict`, `omit`, `rule`, `enforce` or `census`" )
+          fail
+            ( 6,
+              s"`$other` is not a recognised option; expected one of `errors`, `header`, " +
+                "`columns`, `umbrella`, `moduleRoot`, `language`, `interpolators`, `gate`, " +
+                "`strict`, `omit`, `rule`, `enforce` or `census`" )
 
     // An enforced rule must be defined, and a defined rule must detect
     // something, or the configuration is not saying what it seems to say.
     config.enforced.keys.foreach: name =>
-      if config.definition(name).isEmpty then errors += s"rule `$name` is enforced but not defined"
+      if config.definition(name).isEmpty then fail(7, s"rule `$name` is enforced but not defined")
 
     config.rules.foreach: rule =>
-      if rule.predicates.isEmpty then errors += s"rule `${rule.name}` has no predicates"
+      if rule.predicates.isEmpty then fail(8, s"rule `${rule.name}` has no predicates")
+
+    // An entry in the letter form the style's rules were named by before their codes would
+    // select nothing now, silently; it is reported with the code it has become, unless a
+    // project rule has that name.
+    (config.strict ++ config.omitted).toList.sorted.foreach: entry =>
+      Rules.migrated(entry).foreach: code =>
+        if config.definition(entry).isEmpty
+        then fail(9, s"`$entry` is now `$code`; name a rule by its code")
 
     (config, errors.result())
 
@@ -210,7 +220,7 @@ final case class Config
 
     // The licence header, line by line, which every file must begin with
     // verbatim. Line `header.length + 1` must be the `package` declaration.
-    // `None` disables the header rules (F1, F2, F3) entirely, for a project
+    // `None` disables the header rules (↯/c.1.1, ↯/c.1.2, ↯/c.1.3) entirely, for a project
     // that has no licence header.
     header: Option[List[String]] = None,
 
@@ -218,7 +228,7 @@ final case class Config
     columns: Int = 100,
 
     // The umbrella package into which every public module is re-exported. When
-    // unset, the umbrella-export rules (L4, L5) do not fire — a project need
+    // unset, the umbrella-export rules (↯/c.8.4, ↯/c.8.5) do not fire — a project need
     // not have an umbrella package.
     umbrella: Option[String] = None,
 
@@ -234,17 +244,17 @@ final case class Config
 
     // Interpolators whose leading and trailing whitespace is insignificant, so
     // that a multi-line `"""…"""` argument may be laid out as an indented
-    // block (A8). Every other interpolator carries significant whitespace and
+    // block (↯/c.2.8). Every other interpolator carries significant whitespace and
     // is exempt from the layout rules.
     interpolators: Set[String] = Set("m", "j", "x", "y", "tel"),
 
-    // The project's gates, for S1 and the census. None means S1 never fires.
+    // The project's gates, for ↯/c.9.1 and the census. None means ↯/c.9.1 never fires.
     gates: List[Gate] = Nil,
 
-    // Rules reported as errors even when `errors` is false, named by rule id
-    // or by principle prefix (`S1`, or `S` for every soundness rule). A project
-    // adopting the standard gradually can hold the rules it has already
-    // satisfied at error severity without promoting the rest.
+    // Rules reported as errors even when `errors` is false, named by code
+    // without the `↯/` (`c.9.1`, or `c.9` for every rule of Soundness). A
+    // project adopting the standard gradually can hold the rules it has
+    // already satisfied at error severity without promoting the rest.
     strict: Set[String] = Set.empty,
 
     // Rules of the style left unchecked, named the same way.

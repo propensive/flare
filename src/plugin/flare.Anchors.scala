@@ -40,14 +40,14 @@ import dotty.tools.dotc.util.Spans.Span
 
 // A tree-derived model of the indented scopes ("anchor frames") open at each
 // source line. Built once per file from the untyped tree; the line-by-line
-// scope tracking in the checker (rules A5/.1/.9) is due to be ported onto
+// scope tracking in the checker (rule ↯/c.2.5) is due to be ported onto
 // this model. For now the model has no consumers: it is built and tested,
 // but does not affect the checker's behaviour.
 object Anchors:
 
   // The construct whose trailing token opens the scope. `ChainCall` replaces
   // `ColonBlock`/`LambdaBody` when the opener line begins with `.` (a chain
-  // method application, whose body indent is governed by the A1 deep-step
+  // method application, whose body indent is governed by the ↯/c.2.1 deep-step
   // allowance rather than a fixed anchor + 2).
   enum FrameKind:
     case ColonBlock, MatchBody, LambdaBody, DefnRhs, Signature, QuoteSplice, ChainCall
@@ -256,7 +256,7 @@ object Anchors:
         Some(mkFrame(kind, openLine, openLine, endLine, content, lineMap))
 
   // A quote or splice spanning multiple lines. The body-column rules for
-  // quote/splice interiors differ from ordinary scopes (A9.1–A9.5); the
+  // quote/splice interiors differ from ordinary scopes (↯/c.2.9.1–↯/c.2.9.5); the
   // frame records the region and the opener line's leftward-extended anchor.
   private def spanFrame(span: Span, content: String, lineMap: LineMap): Option[Frame] =
     if !span.exists || span.isZeroExtent then None

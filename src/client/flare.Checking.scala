@@ -65,10 +65,10 @@ object Checking:
 
     def parseErrors: List[flare.Frontend.Diagnostic] = result.diagnostics.filter(_.error)
 
-    // Every finding, a parse error among them under the rule `parse`.
+    // Every finding, a parse error among them under the rule `parse`, with its code.
     def all: List[Report.Finding] =
       val failures = parseErrors.map: (d: flare.Frontend.Diagnostic) =>
-        Report.Finding(d.path, d.line, d.column, t"parse", d.message, true)
+        Report.Finding(d.path, d.line, d.column, t"parse", d.message, true, d.bolt)
 
       failures + findings
 
@@ -102,7 +102,8 @@ object Checking:
                   violation.column,
                   violation.rule.tt,
                   violation.message.tt,
-                  severity == Linter.Severity.Error )
+                  severity == Linter.Severity.Error,
+                  Report.code(violation.rule.tt) )
 
         found.each: (finding: Report.Finding) => sink.found(finding, unit.text)
 

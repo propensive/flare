@@ -43,12 +43,12 @@ enum Principle:
   case Frame, Anchoring, Density, ContinuationMarking, Balance, Proximity, Tabulation,
     Locatability, Soundness, Project
 
-// One rule: an identifier (a style rule's SN family such as `A2` may span
-// several sub-rules emitted with suffixed identifiers; a project rule's is its
-// name), the principle it derives from, the last compiler phase whose output
-// it needs, and a check over the per-file `Context`. A rule must not throw on
-// malformed input: extraction failures surface as an absence of data, never
-// as an exception.
+// One rule: an identifier (a style rule's is its code without the `↯/`, and
+// one such as `c.2.2` may span several variants, emitted with the variant's
+// code; a project rule's is its name), the principle it derives from, the
+// last compiler phase whose output it needs, and a check over the per-file
+// `Context`. A rule must not throw on malformed input: extraction failures
+// surface as an absence of data, never as an exception.
 trait Rule:
   def id: String
   def principle: Principle
@@ -95,7 +95,7 @@ object Rules:
   // preserves) the collision resolutions of the old per-line walk.
   val style: List[Rule] =
     List
-      ( // RawTabs (F5) leads the registry: the old raw pre-tokenizer scan
+      ( // RawTabs (↯/c.1.5) leads the registry: the old raw pre-tokenizer scan
         // ran in the preamble of `check`, before every other rule, so any
         // positional collision with a later rule must keep resolving in its
         // favour. (No such collision exists in the corpus — the tree is
@@ -106,7 +106,7 @@ object Rules:
         AnchorRules.SequenceLayout, AnchorRules.DefinitionAnchors,
         // OperatorContinuation must precede ContinuationIndent: both can fire
         // at the same position (a continuation line led by an operator), and
-        // dotty's reporter keeps only the first diagnostic per position — C2
+        // dotty's reporter keeps only the first diagnostic per position — ↯/c.4.2
         // is the more specific message there.
         ContinuationRules.OperatorContinuation,
         AnchorRules.BodyScopeIndent, AnchorRules.ContinuationIndent,
@@ -117,23 +117,23 @@ object Rules:
         LocatabilityRules.FileNaming, LocatabilityRules.CompanionOrdering,
         LocatabilityRules.UmbrellaExportCompleteness,
         LocatabilityRules.ExtensionExportCompleteness,
-        // LineLength (F4) fired at the top of the old per-line walk, before
+        // LineLength (↯/c.1.4) fired at the top of the old per-line walk, before
         // the quote/splice family — it must keep winning their one positional
         // collision (a 101-column line inside an inline splice).
         FrameRules.LineLength,
         // The former per-line-walk cluster, in its old within-line order:
-        // F6, F7, P3, then the `checkTokens` family (F8, B1, B2,
-        // B3, in `checkTokens` call order), then P1. All of these fired
-        // after LineLength (F4) at the top of `checkLine` and before the
-        // C3/C1/A7/P4 block below. Two placement constraints carry
+        // ↯/c.1.6, ↯/c.1.7, ↯/c.6.3, then the `checkTokens` family (↯/c.1.8, ↯/c.5.1, ↯/c.5.2,
+        // ↯/c.5.3, in `checkTokens` call order), then ↯/c.6.1. All of these fired
+        // after LineLength (↯/c.1.4) at the top of `checkLine` and before the
+        // ↯/c.4.3, ↯/c.4.1, ↯/c.2.7 and ↯/c.6.4 block below. Two placement constraints carry
         // evidence from the corpus:
-        //  - IndentWidth (F6) must follow ProximityRules.ChunkSeparation:
-        //    both fire at monotonous.Alphabet:186:1, and P2 is the
-        //    surviving diagnostic in the baseline compile, so P2 must keep
+        //  - IndentWidth (↯/c.1.6) must follow ProximityRules.ChunkSeparation:
+        //    both fire at monotonous.Alphabet:186:1, and ↯/c.6.2 is the
+        //    surviving diagnostic in the baseline compile, so ↯/c.6.2 must keep
         //    winning — dotty's reporter keeps only the first diagnostic per
         //    position.
-        //  - No other positional collision involves F6, F7, P3, F8,
-        //    B1, B2, B3 or P1 anywhere in the corpus (checked over
+        //  - No other positional collision involves ↯/c.1.6, ↯/c.1.7, ↯/c.6.3, ↯/c.1.8,
+        //    ↯/c.5.1, ↯/c.5.2, ↯/c.5.3 or ↯/c.6.1 anywhere in the corpus (checked over
         //    the full parse-path oracle), so the remaining placements
         //    simply preserve the old walk's within-line order.
         FrameRules.IndentWidth, FrameRules.TrailingWhitespace,
@@ -141,51 +141,71 @@ object Rules:
         BalanceRules.OperatorSpacing, BalanceRules.AssignmentSpacing,
         BalanceRules.SymbolicMethodNames, ProximityRules.CommaSpacing,
         // These four fired towards the end of the old per-line walk (in this
-        // order: C3, C1, A7, P4), after LineLength and before the
+        // order: ↯/c.4.3, ↯/c.4.1, ↯/c.2.7, ↯/c.6.4), after LineLength and before the
         // quote/splice family, so they sit between those two here. No
         // positional collision with any other rule exists in the corpus, but
         // the relative order is preserved regardless.
         ContinuationRules.HardSpace, ContinuationRules.ChainContinuation,
         AnchorRules.GivenArrowAlign, ProximityRules.ReturnTypeBlank,
-        // FormalBlockSpacing (B4) must follow FrameRules.LineLength: both
-        // fire at turbulence.Benchmarks:523:101, and F4 fired first in the
+        // FormalBlockSpacing (↯/c.5.4) must follow FrameRules.LineLength: both
+        // fire at turbulence.Benchmarks:523:101, and ↯/c.1.4 fired first in the
         // old walk (LineLength ran at the top of checkLine, before the
-        // bracket-interior checks), so F4 must keep winning there.
-        // HeavyBracketAnchor (A4) must follow AnchorRules
+        // bracket-interior checks), so ↯/c.1.4 must keep winning there.
+        // HeavyBracketAnchor (↯/c.2.4) must follow AnchorRules
         // .ContinuationIndent: both fire at jacinta.stagedInternal:621:21
-        // and monotonous.Alphabet:287:25, and A1 won in the baseline
-        // compile (A1 is the surviving diagnostic at monotonous
+        // and monotonous.Alphabet:287:25, and ↯/c.2.1 won in the baseline
+        // compile (↯/c.2.1 is the surviving diagnostic at monotonous
         // .Alphabet:287:25), so it must keep firing first. No other
-        // positional collision involves B4, B5, T2 or A4 in the
+        // positional collision involves ↯/c.5.4, ↯/c.5.5, ↯/c.7.2 or ↯/c.2.4 in the
         // corpus.
         BalanceRules.FormalBlockSpacing, BalanceRules.CompactBracketSpacing,
         TabulationRules.UsingAlignment, AnchorRules.HeavyBracketAnchor,
-        // AnnotationAdjacency (P6) fired at the very bottom of the old
-        // `checkLine` (the P6.2 blank-line check and the end-of-file P6.1
+        // AnnotationAdjacency (↯/c.6.6) fired at the very bottom of the old
+        // `checkLine` (the ↯/c.6.6.2 blank-line check and the end-of-file ↯/c.6.6.1
         // flush both ran after every other per-line check), so it sits after
-        // the whole walk-era cluster; no positional collision involves P6
+        // the whole walk-era cluster; no positional collision involves ↯/c.6.6
         // in the corpus.
         ProximityRules.AnnotationAdjacency,
-        // QuoteSpliceLayout stays last: the A9.1–.7 family used to fire at
+        // QuoteSpliceLayout stays last: the ↯/c.2.9.1–↯/c.2.9.6 family used to fire at
         // the end of the per-line walk, after every registry rule, so any
-        // positional collision with an earlier rule (e.g. C2.1 with A9.4)
+        // positional collision with an earlier rule (e.g. ↯/c.4.2.1 with ↯/c.2.9.4)
         // must keep resolving in the earlier rule's favour — dotty's
         // reporter keeps only the first diagnostic per position.
         QuoteRules.QuoteSpliceLayout,
-        // UnnecessaryBreak (D1) is a new rule, not a port of the per-line
+        // UnnecessaryBreak (↯/c.3.1) is a new rule, not a port of the per-line
         // walk, so it carries no historical ordering evidence — it sits
         // last so that any positional collision with an established rule
         // resolves in the established rule's favour. The corpus has one
-        // such collision: D1 and A9.4 both fire at stratiform
-        // .bintelInternal:633:13, and A9.4 (the established diagnostic)
+        // such collision: ↯/c.3.1 and ↯/c.2.9.4 both fire at stratiform
+        // .bintelInternal:633:13, and ↯/c.2.9.4 (the established diagnostic)
         // must keep winning — dotty's reporter keeps only the first
         // diagnostic per position.
         DensityRules.UnnecessaryBreak,
-        // UnsafeNaming (S1) is likewise a new rule with no historical
+        // UnsafeNaming (↯/c.9.1) is likewise a new rule with no historical
         // ordering evidence, and reports on a definition's name — a position
         // no layout rule occupies — so it sits last and yields to any
         // established rule it should ever collide with.
         SoundnessRules.UnsafeNaming )
+
+  // Is `rule` a rule of the style, named by its code without the `↯/` —
+  // `c.2.2`, or a variant, `c.2.2.1` — rather than a project rule, named as
+  // the project names it?
+  def styled(rule: String): Boolean = rule.matches("c(\\.[0-9]+)+")
+
+  // The code a rule or a principle of the style named in the letter form of
+  // the identifiers before the codes now has, the letters being the initials
+  // of the principles in the order of their numbers: `L4` is now `c.8.4`,
+  // `A2.1` is `c.2.2.1` and `S` is `c.9`. `None` for any other text.
+  def migrated(entry: String): Option[String] =
+    def principle(letter: String): Int = "FADCBPTLS".indexOf(letter) + 1
+
+    entry match
+      case LetterRule(letter, number) => Some(s"c.${principle(letter.nn)}.$number")
+      case LetterPrinciple(letter)    => Some(s"c.${principle(letter.nn)}")
+      case _                          => None
+
+  private val LetterRule      = "([FADCBPTLS])([0-9]+(?:\\.[0-9]+)?)".r
+  private val LetterPrinciple = "([FADCBPTLS])".r
 
   // The rules a configuration enables: the style's, less those it omits, then
   // a project rule for each definition it enforces, in the order they were

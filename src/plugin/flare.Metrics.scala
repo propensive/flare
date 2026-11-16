@@ -66,7 +66,7 @@ object Metrics:
             if SoundnessRules.gated(defn, gate) then bump(s"${gate.prefix}-gate")
 
             // A definition that claims the gate without taking the token: what
-            // S1.2 reports. It is counted as well as reported because a warning
+            // ↯/c.9.1.2 reports. It is counted as well as reported because a warning
             // can be hidden -- dotty keeps only the first diagnostic at a
             // position, so a file that already warns about something enclosing
             // loses it -- and an exemption a project has decided to live with

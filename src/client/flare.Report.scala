@@ -46,7 +46,33 @@ import textMetrics.uniformMetric
 // table of the rules that fired, through Pyrocosm's semantic model and its terminal renderer. In
 // terse mode (for CI, or on request) one grep-able line per finding instead.
 object Report:
-  case class Finding(path: Text, line: Int, column: Int, rule: Text, message: Text, error: Boolean)
+  // A finding's `rule` is a rule of the style's code without the `↯/`, `c.2.2.1`, or a project
+  // rule's name, or `parse` for a source which did not parse; `code` is what it is reported
+  // under (see `code`).
+  case class Finding
+    ( path:    Text,
+      line:    Int,
+      column:  Int,
+      rule:    Text,
+      message: Text,
+      error:   Boolean,
+      code:    fulminate.Bolt ):
+
+    // Is this a violation of a project rule, which is reported with the rule's name?
+    def project: Boolean =
+      code.subdivision == FlareBolts.plugin && code.error == FlareBolts.projectViolation
+
+    // How a line reporting the finding begins: `[↯/f.21.1/c.2.2.1]`, or `[↯/f.21.2] cast:`.
+    def label: Text = if project then t"${code.label} $rule:" else code.label
+
+  // The code a violation of `rule` is reported under, as the plugin reports it: flare's violation
+  // of a style rule carrying the rule's own code, `↯/f.21.1/c.2.2.1`, or its violation of a
+  // project rule, `↯/f.21.2`.
+  def code(rule: Text): fulminate.Bolt = fulminate.Bolt.parse(t"↯/${FlareBolts.reported(rule.s)}")
+
+  // A rule as a table or a list names it: a rule of the style by its code, `↯/c.2.2.1`, and any
+  // other by its name.
+  def named(rule: Text): Text = if Rules.styled(rule.s) then t"↯/$rule" else rule
 
   // `path` relative to the project root, for the report; the full path is noise the reader
   // already knows.
@@ -65,15 +91,19 @@ object Report:
 
     renderer.blocks(blocks, width).each: line => Out.println(line)
 
-  // The finding as a diagnostic: where, which rule, what; and the line it is on, a line of
-  // context either side, numbered as the file numbers them, with a caret at the column.
+  // The finding as a diagnostic: where, its code, what (after a project rule's name); and the
+  // line it is on, a line of context either side, numbered as the file numbers them, with a
+  // caret at the column.
   def excerpt(root: Text, finding: Finding, text: Text): Block =
     val tone  = if finding.error then Tone.Failure else Tone.Warning
     val style = if finding.error then Block.Note.Style.Erroneous else Block.Note.Style.Caution
     val location = Block.Location(relative(root, finding.path), finding.line, finding.column)
 
-    val label: Inline = Inline.Toned(tone, Inline.text(t"[↯${finding.rule}]"))
-    val message: Block = Block.Paragraph(List(label, Inline.Textual(t" ${finding.message}")))
+    val named: List[Inline] =
+      if !finding.project then Nil
+      else List(Inline.Toned(tone, Inline.text(t"${finding.rule}:")), Inline.Textual(t" "))
+
+    val message: Block = Block.Paragraph(named + List(Inline.Textual(finding.message)))
 
     val lines: List[Text] = text.cut(t"\n")
     val first = (finding.line - 2).max(0)
@@ -88,7 +118,7 @@ object Report:
         val note   = Block.Note(focus, column, column, style)
         List(Block.Code(Language.Scala, shown.map(highlighted), List(note), first + 1))
 
-    Block.Diagnostic(tone, location, List(message), excerpt)
+    Block.Diagnostic(tone, location, List(message), excerpt, code = finding.code)
 
   // A line of Scala, tokenised by harlequin and carried into the model by pyrocosm's compiler
   // bridge; a line that fails to tokenise is shown plain.
@@ -107,7 +137,7 @@ object Report:
 
         Block.Row
           ( List
-              ( Block.Cell(List(Inline.Toned(tone, Inline.text(rule)))),
+              ( Block.Cell(List(Inline.Toned(tone, Inline.text(named(rule))))),
                 Block.Cell(List(Inline.Numeral(hits.size.toDouble, 0))),
                 Block.Cell(Inline.text(if error then t"error" else t"warning")) ) )
 
