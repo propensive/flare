@@ -5,6 +5,11 @@ name: CI
 # ./mill wrapper, etc/shared, and the pins in etc/refs). The launcher resolves flare-plugin and
 # flare-client as published coordinates, so both are published locally first: `flare.__` is
 # Mill's wildcard, which resolves `publishLocal` to exactly the publishable modules.
+#
+# The suite runs under plain `java`, through `flare.runTests`, rather than through fume: a fume
+# release reads the test events only of the Soundness it was built with, and fume is built on
+# Pyrocosm, so none reads Soundness 0.76.0's until Pyrocosm has been released against it. Drop
+# `test_main` once etc/tools pins a fume which does.
 
 on:
   pull_request:
@@ -20,3 +25,4 @@ jobs:
       publish_local: flare.__
       assembly:      flare.launcher.assembly
       test_assembly: flare.test.assembly
+      test_main:     flare.runTests
