@@ -37,7 +37,7 @@ import scala.collection.mutable
 import dotty.tools.dotc.ast.untpd
 import dotty.tools.dotc.util.SourceFile
 
-// D1 — the "necessity" extractor (Principle P3, Density): the most
+// ↯/c.3.1 — the "necessity" extractor (Density, ↯/c.3): the most
 // compact compliant layout that fits is the only correct one, so a construct
 // spread over several source lines whose one-line rendering would fit within
 // the line limit is a violation — a break must always mean "didn't fit".
@@ -57,7 +57,7 @@ import dotty.tools.dotc.util.SourceFile
 // can only suppress a finding, never invent one.
 object Necessity:
   // One flaggable construct: `line`/`col` locate its first character (the
-  // emission point for D1); `width` is the column count of the one-line
+  // emission point for ↯/c.3.1); `width` is the column count of the one-line
   // rendering, including the code already to the left and right of the
   // construct on its first and last lines; `start`/`end` delimit the
   // measured region (used for nested-site deduplication); `rendering` is the
@@ -80,7 +80,7 @@ object Necessity:
     // (mirroring the chain walk in `Operators`), or the `else` branch of an
     // enclosing `If` (an `else if` link). Such a node's layout is coupled
     // to its whole chain — an `else if` cannot be one-lined on its own
-    // without breaking the body-cascade rule (A2.2) — so only the top of
+    // without breaking the body-cascade rule (↯/c.2.2.2) — so only the top of
     // each chain is offered as a site.
     def visit(t: untpd.Tree, continued: Boolean): Unit = t match
       case op: untpd.InfixOp if reportableOp(op) =>
@@ -190,7 +190,7 @@ object Necessity:
               val col  = source.column(sp.start) + 1
 
               // A paren-wrapped lambda whose closer joined the region must
-              // be *rewritten* brace-wrapped on one line (D2.1) — the same
+              // be *rewritten* brace-wrapped on one line (↯/c.3.2.1) — the same
               // two-column allowance `pad` charged to the width.
               val rendering =
                 if pad == 2 && end > sp.end
@@ -279,7 +279,7 @@ object Necessity:
   // line, so a colon-wrapped lambda with trailing code after its body
   // cannot be one-lined and yields `None`. The final component is a width
   // pad: a paren-wrapped named lambda would have to become brace-wrapped
-  // (`{ λ }`) on one line per D2.1, which is two columns wider than the
+  // (`{ λ }`) on one line per ↯/c.3.2.1, which is two columns wider than the
   // collapsed paren form.
   private def lambdaRegion(f: untpd.Function, text: String): Option[(Int, Int, Boolean, Int)] =
     val sp = f.span

@@ -46,7 +46,7 @@ case class ImportInfo
 object Imports:
   // Extract every top-level `import` (or `export`) statement from the
   // package body. Imports inside templates / blocks are intentionally
-  // ignored — Consequent's L1 only governs file-top imports.
+  // ignored — Consequent's ↯/c.8.1 only governs file-top imports.
   def extract(tree: untpd.Tree, source: SourceFile): List[ImportInfo] =
     val out = mutable.ListBuffer[ImportInfo]()
     val content = String(source.content)

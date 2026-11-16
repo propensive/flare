@@ -46,7 +46,7 @@ case class GenLine
 object Comprehensions:
   // Walk the tree for every `for ... yield`/`for ... do` and return each
   // comprehension's enumerators (`x <- xs`, `y = expr`, `if filter`) as a
-  // `List[GenLine]`. T3 then checks LHS / `<-`-or-`=` / filter alignment
+  // `List[GenLine]`. ↯/c.7.3 then checks LHS / `<-`-or-`=` / filter alignment
   // within each list. Comprehensions whose enumerators all sit on a single
   // line don't need alignment — those lists collapse to one entry and the
   // rule check no-ops.
@@ -91,7 +91,7 @@ object Comprehensions:
         else
           // The filter's tree span starts at the expression itself (`x > 0`),
           // not at the `if` keyword the user actually typed. Walk back across
-          // whitespace to recover the `if` position so T3.3 compares against
+          // whitespace to recover the `if` position so ↯/c.7.3.3 compares against
           // the column the user sees.
           val content   = String(source.content)
           val ifOffset  = findIfBefore(content, sp.start)

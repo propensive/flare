@@ -149,7 +149,8 @@ Before bolt codes, each rule was identified by the letter of its principle and
 its number, `A2.1`; the principle letters were `F`, `A`, `D`, `C`, `B`, `P`, `T`,
 `L` and `S`, in the order of the principles' numbers now. A configuration which
 names a rule by its letter identifier, in `omit` or `strict`, must name it by its
-code instead.
+code instead; flare reports such an entry as `↯/f.21.3.9`, naming the code it
+now is (`L4 is now c.8.4`), rather than let it select nothing.
 
 | Was | Is |
 | --- | --- |

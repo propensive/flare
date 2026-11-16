@@ -74,10 +74,9 @@ object Linter:
   // may name one; failing that, the rule's own; a style rule is an error when
   // the project holds it, or every rule, at error severity.
   def severity(config: Config, rule: String): Severity =
-    val family = rule.takeWhile(_ != '.')
-
     val level: Option[String] =
-      config.enforced.get(family).flatten.orElse(config.definition(family).map(_.severity))
+      if Rules.styled(rule) then None
+      else config.enforced.get(rule).flatten.orElse(config.definition(rule).map(_.severity))
 
     level match
       case Some("error")                                  => Severity.Error

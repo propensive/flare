@@ -35,14 +35,14 @@ package flare
 import scala.collection.mutable
 
 object TabulationRules:
-  // T1/P2: walk each `Match`/`Try` case group from the parsed tree.
+  // ↯/c.7.1 and ↯/c.6.2: walk each `Match`/`Try` case group from the parsed tree.
   // Within a group, runs of *single-line* cases at the same indent with no
-  // intervening blank lines must have their `=>` columns aligned (T1);
+  // intervening blank lines must have their `=>` columns aligned (↯/c.7.1);
   // any *multi-line* case other than the first in its group must be
-  // preceded by a blank line (P2). A separate sub-check requires exactly
+  // preceded by a blank line (↯/c.6.2). A separate sub-check requires exactly
   // one space before `=>` in a multi-line case.
   object CaseAlignment extends Rule:
-    def id: String = "T1"
+    def id: String = "c.7.1"
     def principle: Principle = Principle.Tabulation
 
     def check(ctx: Context): List[Violation] =
@@ -51,7 +51,7 @@ object TabulationRules:
       val out   = mutable.ListBuffer[Violation]()
 
       ctx.caseGroups.foreach: group =>
-        // P2 (blank line before multi-line case) is subsumed by P2's
+        // ↯/c.6.2 (blank line before multi-line case) is subsumed by ↯/c.6.2's
         // generic chunk-separation rule (`ChunkSeparation`). Here we
         // retain only the sub-check requiring exactly one space before
         // `=>` in a multi-line case.
@@ -71,13 +71,13 @@ object TabulationRules:
             if c.arrowAloneOnLine then
               out +=
                 Violation
-                  ( file, c.arrowLine, c.arrowCol, "T1.1",
+                  ( file, c.arrowLine, c.arrowCol, "c.7.1.1",
                     "`=>` of a multi-line case pattern must trail the last pattern " +
                       "token on the same line, not stand alone on its own line" )
             else if !c.bodyStartsAfterArrow then
               out +=
                 Violation
-                  ( file, c.arrowLine, c.arrowCol, "T1.2",
+                  ( file, c.arrowLine, c.arrowCol, "c.7.1.2",
                     "body of a multi-line case pattern must start on the line after `=>`" )
           // Single-line pattern, multi-line body: keep the original sub-rule
           // (exactly one space before `=>` on the case-keyword line). Only
@@ -87,10 +87,10 @@ object TabulationRules:
           else if !c.isSingleLine && !c.arrowAloneOnLine && c.spacesBeforeArrow != 1 then
             out +=
               Violation
-                ( file, c.arrowLine, c.arrowCol, "T1.3",
+                ( file, c.arrowLine, c.arrowCol, "c.7.1.3",
                   "exactly one space is required before `=>` in a multi-line case" )
 
-        // T1: split into runs of consecutive single-line cases at the same
+        // ↯/c.7.1: split into runs of consecutive single-line cases at the same
         // case-keyword column with no blank line between them; align `=>` in
         // any run of size ≥ 2.
         val runs = mutable.ListBuffer[mutable.ListBuffer[CaseInfo]]()
@@ -122,7 +122,7 @@ object TabulationRules:
               if c.arrowCol != expected then
                 out +=
                   Violation
-                    ( file, c.arrowLine, c.arrowCol, "T1",
+                    ( file, c.arrowLine, c.arrowCol, "c.7.1",
                       s"`=>` should be at column $expected to align with the case run" )
 
       out.toList
@@ -146,14 +146,14 @@ object TabulationRules:
 
       false
 
-  // T3: alignment within each for-comprehension's enumerator block. The
+  // ↯/c.7.3: alignment within each for-comprehension's enumerator block. The
   // first non-filter generator defines the **anchor** — its LHS column
   // and `<-`/`=` column. Other generators must match both; bindings
   // (`y = e`) match the same way; filter lines (`if expr`) must instead
   // sit at the anchor's operator column. Single-line comprehensions
   // collapse to one enumerator per group and skip the check.
   object ForComprehensionAlignment extends Rule:
-    def id: String = "T3"
+    def id: String = "c.7.3"
     def principle: Principle = Principle.Tabulation
 
     def check(ctx: Context): List[Violation] =
@@ -190,28 +190,28 @@ object TabulationRules:
                     then
                       out +=
                         Violation
-                          ( file, gl.line, gl.startCol, "T3.4",
+                          ( file, gl.line, gl.startCol, "c.7.3.4",
                             "`if` filter must not be separated from the preceding " +
                               "enumerator by a blank line" )
 
                   if gl.startCol != anchorOpCol then
                     out +=
                       Violation
-                        ( file, gl.line, gl.startCol, "T3.3",
+                        ( file, gl.line, gl.startCol, "c.7.3.3",
                           s"`if` filter should align with `<-`/`=` at column $anchorOpCol " +
                             s"(found ${gl.startCol})" )
               else
                 if gl.startCol != anchorLhsCol then
                   out +=
                     Violation
-                      ( file, gl.line, gl.startCol, "T3.2",
+                      ( file, gl.line, gl.startCol, "c.7.3.2",
                         s"generator should align with the first generator's LHS at column " +
                           s"$anchorLhsCol (found ${gl.startCol})" )
 
                 if gl.opCol != anchorOpCol then
                   out +=
                     Violation
-                      ( file, gl.line, gl.opCol, "T3.1",
+                      ( file, gl.line, gl.opCol, "c.7.3.1",
                         s"`<-`/`=` should be vertically aligned at column $anchorOpCol " +
                           s"(found ${gl.opCol})" )
 
@@ -219,7 +219,7 @@ object TabulationRules:
 
       out.toList
 
-  // T2: inside a multi-line `( using ... )` clause, each fresh
+  // ↯/c.7.2: inside a multi-line `( using ... )` clause, each fresh
   // parameter row must begin at the column of the clause's first
   // parameter token. A row is fresh iff the previous line ended with
   // `,`, `(`, or `using` (the row-separator tokens); otherwise the line
@@ -228,7 +228,7 @@ object TabulationRules:
   // `inline`) are part of the parameter, so rows align under the FIRST
   // token of the first parameter — including its modifier.
   object UsingAlignment extends Rule:
-    def id: String = "T2"
+    def id: String = "c.7.2"
     def principle: Principle = Principle.Tabulation
 
     def check(ctx: Context): List[Violation] =
@@ -264,7 +264,7 @@ object TabulationRules:
               if c != expected then
                 out +=
                   Violation
-                    ( ctx.file, lineNum, c, "T2",
+                    ( ctx.file, lineNum, c, "c.7.2",
                       s"using-clause parameter should align at column $expected (found $c)" )
 
         // Then update state by walking tokens.

@@ -287,7 +287,8 @@ final class Dashboard():
                 failure(t"The profile `${target.profile}` is no longer defined in ${target.root}")
 
         case Workspace.Outcome.Missing =>
-          findings() = failure(t"No .pyrocosm/flare/config.tel was found at ${target.root}")
+          val label = pyrocosm.Bolts(FlareBolts.client, 1, 1).label
+          findings() = failure(t"$label No .pyrocosm/flare/config.tel was found at ${target.root}")
 
         case Workspace.Outcome.Invalid(file, errors) =>
           val heading = Inline.text(t"$file could not be used")
@@ -316,7 +317,7 @@ final class Dashboard():
       else
         val message: Text =
           filter.lay(t"No violations in ${last.outcome.files.show} files"): (rule: Text) =>
-            t"Nothing under the rule $rule"
+            t"Nothing under the rule ${Report.named(rule)}"
 
         List(Block.Paragraph(List(Inline.Toned(Tone.Success, Inline.text(message)))))
 
@@ -391,7 +392,7 @@ final class Dashboard():
           counts.map: (rule: Text, count: Int) =>
             val tally = Inline.Toned(Tone.Muted, List(Inline.Numeral(count.toDouble, 0)))
             val spaced: List[Inline] = List(Inline.Textual(t" "), tally)
-            val label: List[Inline] = marked(filter == rule, rule) + spaced
+            val label: List[Inline] = marked(filter == rule, Report.named(rule)) + spaced
 
             Block.Item(List(Block.Paragraph(label)), ruleAction(rule))
 
@@ -421,7 +422,7 @@ final class Dashboard():
             rules.map: (rule: Text) =>
               val hits = all.filter(_.rule == rule)
               val tone = if hits.exists(_.error) then Tone.Failure else Tone.Warning
-              Block.Series(Inline.text(rule), List(hits.size.toDouble), tone)
+              Block.Series(Inline.text(Report.named(rule)), List(hits.size.toDouble), tone)
 
           List(Block.Chart(Block.Chart.Kind.Bars, series))
 

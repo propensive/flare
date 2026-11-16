@@ -60,8 +60,8 @@ object Tests extends Suite(m"Flare Tests"):
 
   val config: Config = Config(language = Some(features), header = Some(header))
 
-  // A project that has a gate, for the S1 tests. A project that has none
-  // declares no gate and S1 never fires.
+  // A project that has a gate, for the ↯/c.9.1 tests. A project that has none
+  // declares no gate and ↯/c.9.1 never fires.
   val unsafe: Gate = Gate("Unsafe", "unsafe")
   val gated: Config = config.copy(gates = List(unsafe))
 
@@ -105,7 +105,7 @@ object Tests extends Suite(m"Flare Tests"):
   def hits(body: String, predicates: (String, String)*): Int =
     projectRules(rule("probe", predicates*), body).length
 
-  // A project with an umbrella re-export package, for the L4 and L5 tests.
+  // A project with an umbrella re-export package, for the ↯/c.8.4 and ↯/c.8.5 tests.
   val umbrella: Config = config.copy(umbrella = Some("umbrella"))
 
   def stub(body: String): String =
@@ -228,64 +228,64 @@ object Tests extends Suite(m"Flare Tests"):
       test(m"Tab character is rejected"):
         rules("def\tfoo(): Int = 1\n")
 
-      . assert(_.contains("F5"))
+      . assert(_.contains("c.1.5"))
 
       test(m"Line longer than 100 columns is rejected"):
         rules("val x = "+"a".repeat(120)+"\n")
 
-      . assert(_.contains("F4"))
+      . assert(_.contains("c.1.4"))
 
       test(m"Odd indent is rejected"):
         rules("object A:\n   val x = 1\n")
 
-      . assert(_.contains("F6"))
+      . assert(_.contains("c.1.6"))
 
       test(m"Trailing whitespace is rejected"):
         rules("val x = 1   \n")
 
-      . assert(_.contains("F7"))
+      . assert(_.contains("c.1.7"))
 
       test(m"Three consecutive blank lines are rejected"):
         rules("val a = 1\n\n\n\nval b = 2\n")
 
-      . assert(_.contains("P3"))
+      . assert(_.contains("c.6.3"))
 
       test(m"Two consecutive blank lines between plain statements are rejected"):
         rules("val a = 1\n\n\nval b = 2\n")
 
-      . assert(_.contains("P3"))
+      . assert(_.contains("c.6.3"))
 
       test(m"One blank line between plain statements is accepted"):
         rules("val a = 1\n\nval b = 2\n")
 
-      . assert: r => !r.contains("P3")
+      . assert: r => !r.contains("c.6.3")
 
       test(m"Two blank lines before a heavy-signature definition are accepted"):
         rules("val a = 1\n\n\ndef heavy(n: Int)\n:   Int =\n\n  n\n")
 
-      . assert: r => !r.contains("P3")
+      . assert: r => !r.contains("c.6.3")
 
       test(m"Two blank lines after a heavy-signature body are accepted"):
         rules("def heavy(n: Int)\n:   Int =\n\n  n\n\n\nval a = 1\n")
 
-      . assert: r => !r.contains("P3")
+      . assert: r => !r.contains("c.6.3")
 
       test(m"Three blank lines around a heavy signature are still rejected"):
         rules("val a = 1\n\n\n\ndef heavy(n: Int)\n:   Int =\n\n  n\n")
 
-      . assert(_.contains("P3"))
+      . assert(_.contains("c.6.3"))
 
       test(m"Clean stub produces no universal-rule diagnostics"):
         rules("val x: Int = 1\n")
 
-      . assert(_.forall { r => !Set("F5", "F4", "F6", "F7", "P3").contains(r) })
+      . assert(_.forall { r => !Set("c.1.5", "c.1.4", "c.1.6", "c.1.7", "c.6.3").contains(r) })
 
     suite(m"Phase 1: License, package, imports"):
 
       test(m"Wrong package name is rejected"):
         Checker.check("<test>", Some("wrongmodule"), stub("val x = 1\n")).toList.map(_.rule)
 
-      . assert(_.contains("F2"))
+      . assert(_.contains("c.1.2"))
 
       test(m"Missing blank after package is rejected"):
         val builder = new StringBuilder
@@ -297,44 +297,44 @@ object Tests extends Suite(m"Flare Tests"):
         builder.append("import alpha.*\n")
         Checker.check("<test>", Some("flare"), builder.toString, config = config).toList.map(_.rule)
 
-      . assert(_.contains("F3"))
+      . assert(_.contains("c.1.3"))
 
       test(m"Out-of-order import groups are rejected"):
         rules("import alpha.*\n\nimport scala.collection.mutable\n\nval x = 1\n")
 
-      . assert(_.contains("L1.2"))
+      . assert(_.contains("c.8.1.2"))
 
       test(m"Missing blank between import groups is rejected"):
         rules("import scala.collection.mutable\nimport alpha.*\n\nval x = 1\n")
 
-      . assert(_.contains("L1.3"))
+      . assert(_.contains("c.8.1.3"))
 
       test(m"Out-of-order imports within a group are rejected"):
         rules("import gamma.*\nimport beta.*\n\nval x = 1\n")
 
-      . assert(_.contains("L1.2"))
+      . assert(_.contains("c.8.1.2"))
 
       test(m"Missing blank line after imports is rejected"):
         rules("import alpha.*\nval x = 1\n")
 
-      . assert(_.contains("P5"))
+      . assert(_.contains("c.6.5"))
 
     suite(m"Phase 1: Per-token rules"):
 
       test(m"No space after comma is rejected"):
         rules("def f(a: Int,b: Int): Int = a + b\n")
 
-      . assert(_.contains("P1.2"))
+      . assert(_.contains("c.6.1.2"))
 
       test(m"Space before comma is rejected"):
         rules("def f(a: Int , b: Int): Int = a + b\n")
 
-      . assert(_.contains("P1.1"))
+      . assert(_.contains("c.6.1.1"))
 
       test(m"Single line with extra spaces after comma is rejected"):
         rules("val x = (1,  2)\n")
 
-      . assert(_.contains("P1.2"))
+      . assert(_.contains("c.6.1.2"))
 
       test(m"Genuinely aligned multi-row commas are accepted"):
         // Two rows where the second token after each `,` lands at the
@@ -342,7 +342,7 @@ object Tests extends Suite(m"Flare Tests"):
         rules
           ("val a = T(1,   t\"H\",  t\"Hydrogen\")\n" + "val b = T(20,  t\"Ne\", t\"Neon\")\n")
 
-      . assert(!_.contains("P1.2"))
+      . assert(!_.contains("c.6.1.2"))
 
       test(m"Fake alignment (extra spaces but cols don't match) is rejected"):
         // `val H` vs `val He` shifts the parens column, so the would-be
@@ -350,217 +350,217 @@ object Tests extends Suite(m"Flare Tests"):
         rules
           ("val H = T(1,   t\"H\",  t\"Hydrogen\")\n" + "val He = T(2,   t\"He\", t\"Helium\")\n")
 
-      . assert(_.contains("P1.2"))
+      . assert(_.contains("c.6.1.2"))
 
       test(m"Space inside parentheses on a single line is rejected"):
         rules("def f( a: Int ): Int = a\n")
 
-      . assert(_.contains("B5"))
+      . assert(_.contains("c.5.5"))
 
       test(m"Block comment outside license header is rejected"):
         rules("/* hello */\nval x = 1\n")
 
-      . assert(_.contains("F8.1"))
+      . assert(_.contains("c.1.8.1"))
 
       test(m"Scaladoc comment is rejected"):
         rules("/** hello */\nval x = 1\n")
 
-      . assert(_.contains("F8.2"))
+      . assert(_.contains("c.1.8.2"))
 
       test(m"Annotation followed by blank line is rejected"):
         rules("@deprecated\n\ndef foo(): Int = 1\n")
 
-      . assert(_.contains("P6.2"))
+      . assert(_.contains("c.6.6.2"))
 
       test(m"Param annotation does not arm 551.2 on a following blank line"):
         rules("case class P(@ident x: Int)\n\ncase class Q(y: Int)\n")
 
-      . assert(!_.contains("P6.2"))
+      . assert(!_.contains("c.6.6.2"))
 
       test(m"Annotation immediately before a decl, then a blank line, is accepted"):
         rules("@foo\ncase class A(x: Int)\n\ncase class B(y: Int)\n")
 
-      . assert(!_.contains("P6.2"))
+      . assert(!_.contains("c.6.6.2"))
 
     suite(m"Phase 2: Operator and method-name spacing"):
 
       test(m"Missing space before `=>` is rejected"):
         rules("val f = (x: Int)=> x + 1\n")
 
-      . assert(_.contains("B1"))
+      . assert(_.contains("c.5.1"))
 
       test(m"Missing space after `=>` is rejected"):
         rules("val f = (x: Int) =>x + 1\n")
 
-      . assert(_.contains("B1"))
+      . assert(_.contains("c.5.1"))
 
       test(m"Missing space around `<:` is rejected"):
         rules("def f[T<:Int](x: T): T = x\n")
 
-      . assert(_.contains("B1"))
+      . assert(_.contains("c.5.1"))
 
       test(m"Asymmetric `&` spacing is rejected"):
         rules("type T = Int& String\n")
 
-      . assert(_.contains("B1"))
+      . assert(_.contains("c.5.1"))
 
       test(m"Single-char `&` with no spaces is accepted"):
         rules("def f(x: Int): Int = x&255\n")
 
-      . assert(!_.contains("B1"))
+      . assert(!_.contains("c.5.1"))
 
       test(m"Spaced `=>` is accepted"):
         rules("val f = (x: Int) => x + 1\n")
 
-      . assert(!_.contains("B1"))
+      . assert(!_.contains("c.5.1"))
 
       test(m"`=>` at line start (continuation) is accepted"):
         rules("val f =\n  (x: Int) =>\n    x + 1\n")
 
-      . assert(!_.contains("B1"))
+      . assert(!_.contains("c.5.1"))
 
       test(m"Missing space before `=` is rejected"):
         rules("val x= 1\n")
 
-      . assert(_.contains("B2"))
+      . assert(_.contains("c.5.2"))
 
       test(m"Missing space after `=` is rejected"):
         rules("val x =1\n")
 
-      . assert(_.contains("B2"))
+      . assert(_.contains("c.5.2"))
 
       test(m"Two spaces *after* `=` is rejected"):
         rules("val x =  1\n")
 
-      . assert(_.contains("B2"))
+      . assert(_.contains("c.5.2"))
 
       test(m"Two spaces before `=` (alignment) is accepted"):
         // Multi-line param blocks often pad before `=` to align the
         // operators vertically; the rule must allow this.
         rules("val x  = 1\n")
 
-      . assert(!_.contains("B2"))
+      . assert(!_.contains("c.5.2"))
 
       test(m"`name_=` setter method declaration is not flagged"):
         rules("def x_=(value: Int): Unit = ()\n")
 
-      . assert(!_.contains("B2"))
+      . assert(!_.contains("c.5.2"))
 
       test(m"Single space around `=` is accepted"):
         rules("val x = 1\n")
 
-      . assert(!_.contains("B2"))
+      . assert(!_.contains("c.5.2"))
 
       test(m"`=` at line end (multi-line RHS) is accepted"):
         rules("val x =\n  1\n")
 
-      . assert(!_.contains("B2"))
+      . assert(!_.contains("c.5.2"))
 
       test(m"Missing space around `+=` is rejected"):
         rules("var x = 0\nx+=1\n")
 
-      . assert(_.contains("B2"))
+      . assert(_.contains("c.5.2"))
 
       test(m"Single space around `+=` is accepted"):
         rules("var x = 0\nx += 1\n")
 
-      . assert(!_.contains("B2"))
+      . assert(!_.contains("c.5.2"))
 
       test(m"Default parameter `=` with bad spacing is rejected"):
         rules("def f(x: Int=5): Int = x\n")
 
-      . assert(_.contains("B2"))
+      . assert(_.contains("c.5.2"))
 
       test(m"Symbolic operator method without space before parens is rejected"):
         rules("infix def +(right: Int): Int = right\n")
 
-      . assert(_.contains("B3"))
+      . assert(_.contains("c.5.3"))
 
       test(m"Symbolic operator method with space is accepted"):
         rules("infix def + (right: Int): Int = right\n")
 
-      . assert(!_.contains("B3"))
+      . assert(!_.contains("c.5.3"))
 
       test(m"`if/then/else` does not pool predicate ops with else-clause ops"):
         rules("def f(x: Int, y: Int, a: Int, b: Int): Int = if x == y then a else a^b\n")
 
-      . assert(!_.contains("B1"))
+      . assert(!_.contains("c.5.1"))
 
       test(m"`else if` chain does not pool ops across branches"):
         rules
           ( "def f(x: Boolean, a: Int, b: Int): Int = " +
             "if x then 1 else if a == b then 2 else a^b\n" )
 
-      . assert(!_.contains("B1"))
+      . assert(!_.contains("c.5.1"))
 
       test(m"Parenthesised `if/then/else` followed by an operator is accepted"):
         rules("def f(x: Int, a: Int, b: Int): Int = (if x == 0 then a else b) + 1\n")
 
-      . assert(!_.contains("B1"))
+      . assert(!_.contains("c.5.1"))
 
       test(m"`case class` modifier does not flush operator frames spuriously"):
         rules("case class Foo(x: Int, y: Int)\n")
 
-      . assert(!_.contains("B1"))
+      . assert(!_.contains("c.5.1"))
 
       test(m"Cross-precedence violation is still rejected"):
         rules("def f(a: Int, b: Int, c: Int): Int = a+b * c\n")
 
-      . assert(_.contains("B1"))
+      . assert(_.contains("c.5.1"))
 
     suite(m"Phase 3: Continuations and shape"):
 
       test(m"`=>` continuation with wrong space count is rejected"):
         rules("given x: [a]\n=> a is Foo =\n  ???\n")
 
-      . assert(_.contains("C3"))
+      . assert(_.contains("c.4.3"))
 
       test(m"`=>` continuation with two spaces is accepted"):
         rules("given x: [a]\n=>  a is Foo =\n\n  ???\n")
 
-      . assert(!_.contains("C3"))
+      . assert(!_.contains("c.4.3"))
 
       test(m"Heavy-signature `:` continuation with wrong spaces is rejected"):
         rules("def foo\n  ( x: Int )\n: Int =\n\n  x\n")
 
-      . assert(_.contains("C3"))
+      . assert(_.contains("c.4.3"))
 
       test(m"Missing blank line before heavy-signature body is rejected"):
         rules("def foo\n  ( x: Int )\n:   Int =\n  x\n")
 
-      . assert(_.contains("P4"))
+      . assert(_.contains("c.6.4"))
 
       test(m"Heavy-signature with blank line before body is accepted"):
         rules("def foo\n  ( x: Int )\n:   Int =\n\n  x\n")
 
-      . assert(!_.contains("P4"))
+      . assert(!_.contains("c.6.4"))
 
       test(m"Chain `. method` with same-indent preceded by blank is rejected"):
         rules("val a = foo\n\n. method\n")
 
-      . assert(_.contains("C1.2"))
+      . assert(_.contains("c.4.1.2"))
 
       test(m"Chain `. method` after deeper line without blank is rejected"):
         rules("val a = foo:\n  bar\n. method\n")
 
-      . assert(_.contains("C1.1"))
+      . assert(_.contains("c.4.1.1"))
 
     suite(m"Phase 4: Cross-cutting"):
 
       test(m"Companion object after class is rejected"):
         rules("class Foo:\n  val x = 1\n\nobject Foo:\n  val y = 2\n")
 
-      . assert(_.contains("L3"))
+      . assert(_.contains("c.8.3"))
 
       test(m"Companion object before class is accepted"):
         rules("object Foo:\n  val y = 2\n\nclass Foo:\n  val x = 1\n")
 
-      . assert(!_.contains("L3"))
+      . assert(!_.contains("c.8.3"))
 
       test(m"Same-named decl in a different scope is not a companion (398)"):
         rules("enum Hole:\n  case Foo(x: Int)\n\nobject Foo:\n  val y = 2\n")
 
-      . assert(!_.contains("L3"))
+      . assert(!_.contains("c.8.3"))
 
     suite(m"Phase 3: Match-case rules"):
 
@@ -571,7 +571,7 @@ object Tests extends Suite(m"Flare Tests"):
             "  case LongerName => 2\n" +
             "  case Med => 3\n" )
 
-      . assert(_.contains("T1"))
+      . assert(_.contains("c.7.1"))
 
       test(m"Aligned `=>` in case run is accepted"):
         rules
@@ -580,7 +580,7 @@ object Tests extends Suite(m"Flare Tests"):
             "  case LongerName => 2\n" +
             "  case Medium     => 3\n" )
 
-      . assert(!_.contains("T1"))
+      . assert(!_.contains("c.7.1"))
 
       test(m"Multi-line case without preceding blank line is rejected"):
         rules
@@ -589,13 +589,13 @@ object Tests extends Suite(m"Flare Tests"):
             "  case Bar =>\n" +
             "    bigBody\n" )
 
-      . assert(_.contains("P2"))
+      . assert(_.contains("c.6.2"))
 
       test(m"Multi-line case as first case (after `match`) is accepted"):
         rules
           ("def f(x: Any): Any = x match\n" + "  case Bar =>\n" + "    bigBody\n")
 
-      . assert(!_.contains("P2"))
+      . assert(!_.contains("c.6.2"))
 
       test(m"Multi-line case after blank is accepted"):
         rules
@@ -605,9 +605,9 @@ object Tests extends Suite(m"Flare Tests"):
             "  case Bar =>\n" +
             "    bigBody\n" )
 
-      . assert(!_.contains("P2"))
+      . assert(!_.contains("c.6.2"))
 
-      test(m"Operator-continuation line does not trigger P2"):
+      test(m"Operator-continuation line does not trigger ↯/c.6.2"):
         // Dotty may split `t == 1\n|| t == 2` into two `Block.stats` at
         // the parser level, but inserting a blank line between them
         // would break the operator continuation. The rule must skip
@@ -620,13 +620,13 @@ object Tests extends Suite(m"Flare Tests"):
             "  || t == 2\n" +
             "  || t == 3\n" )
 
-      . assert(!_.contains("P2"))
+      . assert(!_.contains("c.6.2"))
 
       test(m"Multi-line pattern with trailing `=>` is accepted"):
         rules
           ("def f(x: Any): Any = x match\n" + "  case Foo\n" + "    ( a, b ) =>\n" + "    body\n")
 
-      . assert(!_.contains("T1.1"))
+      . assert(!_.contains("c.7.1.1"))
 
       test(m"Multi-line pattern with `=>` alone on its own line is rejected"):
         rules
@@ -636,119 +636,119 @@ object Tests extends Suite(m"Flare Tests"):
             "  =>\n" +
             "    body\n" )
 
-      . assert(_.contains("T1.1"))
+      . assert(_.contains("c.7.1.1"))
 
       test(m"Multi-line pattern with body on same line as `=>` is rejected"):
         rules
           ("def f(x: Any): Any = x match\n" + "  case Foo\n" + "    ( a, b ) => body\n")
 
-      . assert(_.contains("T1.2"))
+      . assert(_.contains("c.7.1.2"))
 
     suite(m"Phase 3: Sibling padding and using alignment"):
 
       test(m"Adjacent multi-line defs without blank line is rejected"):
         rules("def a: Int =\n  1\ndef b: Int =\n  2\n")
 
-      . assert(_.contains("P2"))
+      . assert(_.contains("c.6.2"))
 
       test(m"Adjacent multi-line defs with blank line is accepted"):
         rules("def a: Int =\n  1\n\ndef b: Int =\n  2\n")
 
-      . assert(!_.contains("P2"))
+      . assert(!_.contains("c.6.2"))
 
       test(m"First definition in a new indented scope is accepted"):
         rules("class Foo:\n  def a: Int =\n    1\n\n  def b: Int =\n    2\n")
 
-      . assert(!_.contains("P2"))
+      . assert(!_.contains("c.6.2"))
 
       test(m"Same-indent decls in unrelated scopes skip sibling check"):
         rules("class A:\n  def a: Int = 1\n\nclass B:\n  def b: Int = 2\n")
 
-      . assert(!_.contains("P2"))
+      . assert(!_.contains("c.6.2"))
 
       test(m"Misaligned param after `using` clause first row is rejected"):
         rules("def f\n  ( using a: A,\n        b: B )\n:   Int = 0\n")
 
-      . assert(_.contains("T2"))
+      . assert(_.contains("c.7.2"))
 
       test(m"Aligned `using` clause is accepted"):
         rules("def f\n  ( using a: A,\n          b: B )\n:   Int = 0\n")
 
-      . assert(!_.contains("T2"))
+      . assert(!_.contains("c.7.2"))
 
       test(m"Same-line type-annotation `:` is accepted"):
         rules("def foo: Int = 1\n")
 
-      . assert(!_.contains("A3"))
+      . assert(!_.contains("c.2.3"))
 
       test(m"Type-annotation `:` aligned with `def` on its own line is accepted"):
         rules("def foo\n:   Int =\n  1\n")
 
-      . assert(!_.contains("A3"))
+      . assert(!_.contains("c.2.3"))
 
       test(m"Mis-indented type-annotation `:` on its own line is rejected"):
         rules("def foo\n  : Int =\n    1\n")
 
-      . assert(_.contains("A3"))
+      . assert(_.contains("c.2.3"))
 
       test(m"`:` inside a parameter list is not flagged by 833.3"):
         rules("def f\n  ( a: Int )\n:   Int =\n  a\n")
 
-      . assert(!_.contains("A3"))
+      . assert(!_.contains("c.2.3"))
 
       test(m"Mis-indented `:` after multi-line param list with type params is rejected"):
         rules
           ( "def f[a, b]\n  ( x: Int,\n    y: Int )\n        :   Int =\n  0\n" )
 
-      . assert(_.contains("A3"))
+      . assert(_.contains("c.2.3"))
 
       test(m"Mis-indented `:` after param list containing a default value is rejected"):
         rules
           ( "def f\n  ( x: Int = 0,\n    y: Int = 1 )\n        :   Int =\n  0\n" )
 
-      . assert(_.contains("A3"))
+      . assert(_.contains("c.2.3"))
 
     suite(m"Phase 5: Keyword sequences (R33)"):
 
       test(m"Compact `if/then/else` is accepted"):
         rules("def f(x: Int): Int = if x > 0 then x else -x\n")
 
-      . assert: r => !r.contains("A2.1") && !r.contains("A2.2")
+      . assert: r => !r.contains("c.2.2.1") && !r.contains("c.2.2.2")
 
       test(m"`if/then/else` with `else` on a new line is accepted"):
         rules("def f(x: Int): Int =\n  if x > 0 then x\n  else -x\n")
 
-      . assert(!_.contains("A2.1"))
+      . assert(!_.contains("c.2.2.1"))
 
       test(m"`if/then/else` fully split with aligned keywords is accepted"):
         rules("def f(x: Int): Int =\n  if x > 0\n  then x\n  else -x\n")
 
-      . assert: r => !r.contains("A2.1")
+      . assert: r => !r.contains("c.2.2.1")
 
       test(m"`if/then/else` with `then` broken but `else` not is rejected"):
         rules("def f(x: Int): Int =\n  if x > 0\n  then x else -x\n")
 
-      . assert(_.contains("A2.1"))
+      . assert(_.contains("c.2.2.1"))
 
       test(m"`if/then/else` with `then` not aligned with `if` is rejected"):
         rules("def f(x: Int): Int =\n  if x > 0\n      then x\n      else -x\n")
 
-      . assert(_.contains("A2.1"))
+      . assert(_.contains("c.2.2.1"))
 
       test(m"`if/then/else` with `then` indented, `else` inline is rejected"):
         rules("def f(x: Int): Int =\n  if x > 0 then\n    x\n  else -x\n")
 
-      . assert(_.contains("A2.2"))
+      . assert(_.contains("c.2.2.2"))
 
       test(m"`if/then/else` with both bodies indented is accepted"):
         rules("def f(x: Int): Int =\n  if x > 0 then\n    x\n  else\n    -x\n")
 
-      . assert: r => !r.contains("A2.1") && !r.contains("A2.2")
+      . assert: r => !r.contains("c.2.2.1") && !r.contains("c.2.2.2")
 
       test(m"Compact `else if` chain is accepted"):
         rules("def f(x: Int): Int = if x > 0 then 1 else if x < 0 then -1 else 0\n")
 
-      . assert: r => !r.contains("A2.1") && !r.contains("A2.2")
+      . assert: r => !r.contains("c.2.2.1") && !r.contains("c.2.2.2")
 
       test(m"`else if` with broken keywords and inline bodies is accepted"):
         rules
@@ -757,7 +757,7 @@ object Tests extends Suite(m"Flare Tests"):
             "  else if x < 0 then -1\n" +
             "  else 0\n" )
 
-      . assert: r => !r.contains("A2.1") && !r.contains("A2.2")
+      . assert: r => !r.contains("c.2.2.1") && !r.contains("c.2.2.2")
 
       test(m"`else if` chain with all bodies indented is accepted"):
         rules
@@ -769,7 +769,7 @@ object Tests extends Suite(m"Flare Tests"):
             "  else\n" +
             "    0\n" )
 
-      . assert: r => !r.contains("A2.1") && !r.contains("A2.2")
+      . assert: r => !r.contains("c.2.2.1") && !r.contains("c.2.2.2")
 
       test(m"`else if` chain: indented then-body, inline tail-body rejected"):
         rules
@@ -779,7 +779,7 @@ object Tests extends Suite(m"Flare Tests"):
             "  else if x < 0 then -1\n" +
             "  else 0\n" )
 
-      . assert(_.contains("A2.2"))
+      . assert(_.contains("c.2.2.2"))
 
       test(m"`else if` chain misaligned with original `if` is rejected"):
         rules
@@ -788,7 +788,7 @@ object Tests extends Suite(m"Flare Tests"):
             "    else if x < 0 then -1\n" +
             "  else 0\n" )
 
-      . assert(_.contains("A2.1"))
+      . assert(_.contains("c.2.2.1"))
 
       test(m"`else` followed by indented inner `if` starts a new anchor"):
         // Newline + indentation between `else` and the next `if` means
@@ -802,7 +802,7 @@ object Tests extends Suite(m"Flare Tests"):
             "    if x < 0 then -x\n" +
             "    else 0\n" )
 
-      . assert: r => !r.contains("A2.1") && !r.contains("A2.2")
+      . assert: r => !r.contains("c.2.2.1") && !r.contains("c.2.2.2")
 
       test(m"Inner `if` as new anchor: misaligned inner `then` is rejected"):
         rules
@@ -813,7 +813,7 @@ object Tests extends Suite(m"Flare Tests"):
             "        then -x\n" +
             "    else 0\n" )
 
-      . assert(_.contains("A2.1"))
+      . assert(_.contains("c.2.2.1"))
 
       test(m"Bridge's internal `then` is part of the unit (not checked)"):
         // The inner `then` of an `else if … then` bridge belongs to
@@ -828,7 +828,7 @@ object Tests extends Suite(m"Flare Tests"):
             "       then -1\n" +
             "  else 0\n" )
 
-      . assert: r => !r.contains("A2.1")
+      . assert: r => !r.contains("c.2.2.1")
 
       test(m"Inner then-only `if` doesn't steal the outer chain's `else`"):
         // The inner `if char >= 0 then ...` (no else) sits inside the
@@ -844,7 +844,7 @@ object Tests extends Suite(m"Flare Tests"):
             "    recur(text, esc)\n" +
             "  else if esc then throw new RuntimeException(\"\")\n" )
 
-      . assert: r => !r.contains("A2.1")
+      . assert: r => !r.contains("c.2.2.1")
 
       test(m"Case-guard `if` in pattern match isn't processed as if-chain"):
         // `case x if guard => …` looks like an `if` with no `then` to
@@ -863,7 +863,7 @@ object Tests extends Suite(m"Flare Tests"):
             "  if y > 0 then y\n" +
             "  else -y\n" )
 
-      . assert: r => !r.contains("A2.1")
+      . assert: r => !r.contains("c.2.2.1")
 
       test(m"For-comprehension filter `if` isn't processed as if-chain"):
         // `if filter` inside a for-comprehension has no `then`. Without
@@ -876,32 +876,32 @@ object Tests extends Suite(m"Flare Tests"):
             "  if y > 0 then y\n" +
             "  else -y\n" )
 
-      . assert: r => !r.contains("A2.1")
+      . assert: r => !r.contains("c.2.2.1")
 
       test(m"Compact `while/do` is accepted"):
         rules("def f(): Unit = while running() do step()\n")
 
-      . assert: r => !r.contains("A2.1")
+      . assert: r => !r.contains("c.2.2.1")
 
       test(m"`while/do` with `do` misaligned with `while` is rejected"):
         rules("def f(): Unit =\n  while running()\n      do step()\n")
 
-      . assert(_.contains("A2.1"))
+      . assert(_.contains("c.2.2.1"))
 
       test(m"Compact `try/catch/finally` is accepted"):
         rules("def f: Int = try compute() catch case e: Throwable => 0 finally cleanup()\n")
 
-      . assert: r => !r.contains("A2.1")
+      . assert: r => !r.contains("c.2.2.1")
 
       test(m"`try/catch/finally`: broken `catch`, inline `finally` rejected"):
         rules("def f: Int =\n  try compute()\n  catch case e: Throwable => 0 finally cleanup()\n")
 
-      . assert(_.contains("A2.1"))
+      . assert(_.contains("c.2.2.1"))
 
       test(m"`try`/`finally` without `catch` is accepted (compact)"):
         rules("def f(): Unit =\n  try block\n  finally cleanup()\n")
 
-      . assert: r => !r.contains("A2.1") && !r.contains("A2.2")
+      . assert: r => !r.contains("c.2.2.1") && !r.contains("c.2.2.2")
 
       test(m"`inline if` aligns broken `then`/`else` with `inline`, not `if`"):
         // The `if` after `inline` starts mid-line, but visually the
@@ -910,7 +910,7 @@ object Tests extends Suite(m"Flare Tests"):
         rules
           ("inline def f(x: Int): Int =\n" + "  inline if x > 0\n" + "  then x\n" + "  else -x\n")
 
-      . assert: r => !r.contains("A2.1") && !r.contains("A2.2")
+      . assert: r => !r.contains("c.2.2.1") && !r.contains("c.2.2.2")
 
       test(m"`else inline if … then` is recognised as a chain bridge"):
         // The `else` is followed by `inline if` (modifier + `if`) on
@@ -923,7 +923,7 @@ object Tests extends Suite(m"Flare Tests"):
             "  else inline if x < 0 then -1\n" +
             "  else 0\n" )
 
-      . assert: r => !r.contains("A2.1") && !r.contains("A2.2")
+      . assert: r => !r.contains("c.2.2.1") && !r.contains("c.2.2.2")
 
       test(m"Inline inner `else` in bridge doesn't fire 833.1"):
         // The bridge's inner `if/then` brings its own inline `else`;
@@ -934,7 +934,7 @@ object Tests extends Suite(m"Flare Tests"):
             "  inline if x > 0 then inline if x == 1 then 1 else 2\n" +
             "  else inline if x == -1 then -1 else -2\n" )
 
-      . assert: r => !r.contains("A2.1")
+      . assert: r => !r.contains("c.2.2.1")
 
       test(m"`try`/`catch` without `finally` won't steal sibling's `finally`"):
         // The first def's `try`/`catch` has no `finally`; the second
@@ -956,389 +956,389 @@ object Tests extends Suite(m"Flare Tests"):
             "  try block\n" +
             "  finally cleanup()\n" )
 
-      . assert: r => !r.contains("A2.2")
+      . assert: r => !r.contains("c.2.2.2")
 
       test(m"Compact `for/yield` is accepted"):
         rules("def f: List[Int] = for x <- List(1, 2) yield x\n")
 
-      . assert: r => !r.contains("A2.1")
+      . assert: r => !r.contains("c.2.2.1")
 
       test(m"Compact `for/do` is accepted"):
         rules("def f(): Unit = for x <- List(1, 2) do println(x)\n")
 
-      . assert: r => !r.contains("A2.1")
+      . assert: r => !r.contains("c.2.2.1")
 
     suite(m"Phase 5: For-comprehension generator alignment (R34)"):
 
       test(m"For-comprehension aligned-LHS style is accepted"):
         rules("val r =\n  for x <- List(1)\n      y <- List(2)\n  yield x + y\n")
 
-      . assert: r => !r.contains("T3.1") && !r.contains("T3.2") && !r.contains("T3.3")
+      . assert: r => !r.contains("c.7.3.1") && !r.contains("c.7.3.2") && !r.contains("c.7.3.3")
 
       test(m"For-comprehension indented-block style is accepted"):
         rules("val r =\n  for\n    x <- List(1)\n    y <- List(2)\n  yield x + y\n")
 
-      . assert: r => !r.contains("T3.1") && !r.contains("T3.2") && !r.contains("T3.3")
+      . assert: r => !r.contains("c.7.3.1") && !r.contains("c.7.3.2") && !r.contains("c.7.3.3")
 
       test(m"For-comprehension with misaligned generator LHS is rejected"):
         rules("val r =\n  for x <- List(1)\n     y <- List(2)\n  yield x + y\n")
 
-      . assert(_.contains("T3.2"))
+      . assert(_.contains("c.7.3.2"))
 
       test(m"For-comprehension with misaligned `<-` operators is rejected"):
         rules("val r =\n  for x  <- List(1)\n      y <- List(2)\n  yield x + y\n")
 
-      . assert(_.contains("T3.1"))
+      . assert(_.contains("c.7.3.1"))
 
       test(m"For-comprehension with `if` filter aligned with `<-` is accepted"):
         rules
           ( "val r =\n  for x  <- List(1)\n         if x > 0\n      y  <- List(2)" +
             "\n  yield x + y\n" )
 
-      . assert: r => !r.contains("T3.3")
+      . assert: r => !r.contains("c.7.3.3")
 
       test(m"For-comprehension with `if` filter at LHS column is rejected"):
         rules
           ( "val r =\n  for x  <- List(1)\n      if x > 0\n      y  <- List(2)" +
             "\n  yield x + y\n" )
 
-      . assert(_.contains("T3.3"))
+      . assert(_.contains("c.7.3.3"))
 
       test(m"For-comprehension with `if` on same line as `<-` is accepted"):
         rules("val r =\n  for x <- List(1) if x > 0\n  yield x\n")
 
-      . assert: r => !r.contains("T3.3") && !r.contains("T3.4")
+      . assert: r => !r.contains("c.7.3.3") && !r.contains("c.7.3.4")
 
       test(m"For-comprehension with blank line before `if` is rejected"):
         rules
           ( "val r =\n  for x  <- List(1)\n\n         if x > 0\n      y  <- List(2)" +
             "\n  yield x + y\n" )
 
-      . assert(_.contains("T3.4"))
+      . assert(_.contains("c.7.3.4"))
 
       test(m"For-comprehension aligned `if` filter is exempt from 473.1"):
         rules
           ( "val r =\n  for x  <- List(1)\n         if x > 0\n      y  <- List(2)" +
             "\n  yield x + y\n" )
 
-      . assert: r => !r.contains("A1")
+      . assert: r => !r.contains("c.2.1")
 
       test(m"Inline term quote with inside space is rejected"):
         rules("val q = '{ x }\n")
 
-      . assert(_.contains("A9.6"))
+      . assert(_.contains("c.2.9.6"))
 
       test(m"Inline term splice with inside space is rejected"):
         rules("val s = ${ x }\n")
 
-      . assert(_.contains("A9.6"))
+      . assert(_.contains("c.2.9.6"))
 
       test(m"Inline type quote with inside space is rejected"):
         rules("val t = '[ Int ]\n")
 
-      . assert(_.contains("A9.6"))
+      . assert(_.contains("c.2.9.6"))
 
       test(m"Tight inline quote is accepted"):
         rules("val q = '{x}\n")
 
-      . assert: r => !r.contains("A9.6")
+      . assert: r => !r.contains("c.2.9.6")
 
       test(m"Tight inline splice is accepted"):
         rules("val s = ${x}\n")
 
-      . assert: r => !r.contains("A9.6")
+      . assert: r => !r.contains("c.2.9.6")
 
       test(m"Tight inline type quote is accepted"):
         rules("val t = '[Int]\n")
 
-      . assert: r => !r.contains("A9.6")
+      . assert: r => !r.contains("c.2.9.6")
 
       test(m"Multi-line quote opener is not flagged as inline"):
         rules("val q =\n  ' {\n    body\n  }\n")
 
-      . assert: r => !r.contains("A9.6")
+      . assert: r => !r.contains("c.2.9.6")
 
     suite(m"Phase 6: Indented-scope body indent (Rule B)"):
 
       test(m"Colon-block body at anchor+2 is accepted"):
         rules("val foo: Int = bar:\n  baz\n")
 
-      . assert: r => !r.contains("A5")
+      . assert: r => !r.contains("c.2.5")
 
       test(m"Colon-lambda body at anchor+2 is accepted"):
         rules("val xs = items.map: x =>\n  f(x)\n")
 
-      . assert: r => !r.contains("A5")
+      . assert: r => !r.contains("c.2.5")
 
       test(m"Nested match on a case line is accepted"):
         rules("foo match\n  case Bar(b) => b match\n    case Q => q\n")
 
-      . assert: r => !r.contains("A5")
+      . assert: r => !r.contains("c.2.5")
 
       test(m"Tuple as = RHS is accepted"):
         rules("val pair: (Int, Int) =\n  (a, b)\n")
 
-      . assert: r => !r.contains("A5")
+      . assert: r => !r.contains("c.2.5")
 
       test(m"= RHS receiver on its own line with arg block is accepted"):
         rules("val foo: Bar =\n  Bar\n    ( baz, quux )\n")
 
-      . assert: r => !r.contains("A5")
+      . assert: r => !r.contains("c.2.5")
 
       test(m"Colon-block body too deep is rejected"):
         rules("val foo: Int = bar:\n      baz\n")
 
-      . assert(_.contains("A5"))
+      . assert(_.contains("c.2.5"))
 
       test(m"Multi-line signature with = not last is rejected"):
         rules("def fn(a: A)\n: Quux = quux:\n  body\n")
 
-      . assert(_.contains("A6"))
+      . assert(_.contains("c.2.6"))
 
       test(m"Multi-line signature with = last is accepted"):
         rules("def fn(a: A)\n: Quux =\n  quux\n")
 
-      . assert: r => !r.contains("A6")
+      . assert: r => !r.contains("c.2.6")
 
       test(m"Param block under a val is owned by 833.4, not Rule B"):
         rules("val foo: Bar = Bar\n  ( baz, quux )\n")
 
-      . assert: r => !r.contains("A5")
+      . assert: r => !r.contains("c.2.5")
 
       test(m"Lambda parameter list is not a heavy continuation (833.4)"):
         rules("foo +\n  (data: Origin) =>\n    body\n")
 
-      . assert: r => !r.contains("A4")
+      . assert: r => !r.contains("c.2.4")
 
       test(m"Genuine heavy bracket continuation is still rejected (833.4)"):
         rules("foo bar\n  ( baz, quux )\n")
 
-      . assert: r => r.contains("A4")
+      . assert: r => r.contains("c.2.4")
 
       test(m"Heavy bracket after a symbolic operator defers to 616, not 833.4"):
         rules("foo +\n  (baz, quux)\n")
 
-      . assert: r => !r.contains("A4")
+      . assert: r => !r.contains("c.2.4")
 
       test(m"Tuple as the first line inside a quote/block is not 833.4"):
         rules("' {\n  ( baz, quux )\n")
 
-      . assert: r => !r.contains("A4")
+      . assert: r => !r.contains("c.2.4")
 
       test(m"Constructor params after an `into` class are not 833.4"):
         rules("into case class Response private\n  ( a: A, b: B )\n")
 
-      . assert: r => !r.contains("A4")
+      . assert: r => !r.contains("c.2.4")
 
       test(m"if-sequence as RHS keeps its own anchor (833.1), not Rule B"):
         rules("val x = if pred\nthen y\nelse z\n")
 
-      . assert: r => r.contains("A2.1") && !r.contains("A5")
+      . assert: r => r.contains("c.2.2.1") && !r.contains("c.2.5")
 
       test(m"Chain-method colon-lambda body (+4) is not flagged"):
         rules("foo\n  .map: x =>\n    body\n")
 
-      . assert: r => !r.contains("A5")
+      . assert: r => !r.contains("c.2.5")
 
       test(m"String-interpolator first body line is handled"):
         rules("val x = bar:\n  t\"a\"+b\n  more\n")
 
-      . assert: r => !r.contains("A5")
+      . assert: r => !r.contains("c.2.5")
 
     suite(m"Phase 5: Infix-operator continuation"):
 
       test(m"Single-line infix is accepted"):
         rules("val x = alpha ++ beta\n")
 
-      . assert: r => !r.contains("C2.1") && !r.contains("C2.2")
+      . assert: r => !r.contains("c.4.2.1") && !r.contains("c.4.2.2")
 
       test(m"Operator at end of line with +2 continuation is accepted"):
         rules("val x = alpha ++\n  beta\n")
 
-      . assert: r => !r.contains("C2.1") && !r.contains("C2.2")
+      . assert: r => !r.contains("c.4.2.1") && !r.contains("c.4.2.2")
 
       test(m"Flat +2 operator chain is accepted"):
         rules("val x = a ++\n  b ++\n  c\n")
 
-      . assert: r => !r.contains("C2.1") && !r.contains("C2.2")
+      . assert: r => !r.contains("c.4.2.1") && !r.contains("c.4.2.2")
 
       test(m"Colon-lambda inside an unclosed paren is never a 247 site"):
         rules("val e =\n  f\n    ( g.let: p =>\n        h(p)\n\n      . or(k) )\n")
 
-      . assert: r => !r.contains("D1")
+      . assert: r => !r.contains("c.3.1")
 
       test(m"Trailing operator abutting its left operand is rejected"):
         rules("val x = alpha ++\n  beta\nval y = gamma++\n  delta\n")
 
-      . assert(_.contains("C2.3"))
+      . assert(_.contains("c.4.2.3"))
 
       test(m"Trailing operator with two spaces before it is rejected"):
         rules("val x = alpha  ++\n  beta\n")
 
-      . assert(_.contains("C2.3"))
+      . assert(_.contains("c.4.2.3"))
 
       test(m"Trailing operator with exactly one space is accepted"):
         rules("val x = alpha ++\n  beta\n")
 
-      . assert: r => !r.contains("C2.3")
+      . assert: r => !r.contains("c.4.2.3")
 
       test(m"Tight infix stays legal when it fits on one line"):
         rules("val x = alpha++beta\n")
 
-      . assert: r => !r.contains("C2.3")
+      . assert: r => !r.contains("c.4.2.3")
 
       test(m"Operator beginning the continuation line is rejected"):
         rules("val x =\n  alpha\n  ++ beta\n")
 
-      . assert(_.contains("C2.1"))
+      . assert(_.contains("c.4.2.1"))
 
       test(m"Operator alone on its own line is rejected"):
         rules("val x =\n  alpha\n  ++\n  beta\n")
 
-      . assert(_.contains("C2.1"))
+      . assert(_.contains("c.4.2.1"))
 
       test(m"Continuation not indented +2 is rejected"):
         rules("val x =\n  alpha ++\n  beta\n")
 
-      . assert(_.contains("C2.2"))
+      . assert(_.contains("c.4.2.2"))
 
       test(m"Symbolic infix type operator follows the same rule"):
         rules("type T =\n  Foo\n  | Bar\n")
 
-      . assert(_.contains("C2.1"))
+      . assert(_.contains("c.4.2.1"))
 
       test(m"Correctly-laid symbolic infix type is accepted"):
         rules("type T =\n  Foo |\n    Bar\n")
 
-      . assert: r => !r.contains("C2.1") && !r.contains("C2.2")
+      . assert: r => !r.contains("c.4.2.1") && !r.contains("c.4.2.2")
 
       test(m"Word-named infix operator is exempt"):
         rules("val b =\n  alpha max\n  beta\n")
 
-      . assert: r => !r.contains("C2.1") && !r.contains("C2.2")
+      . assert: r => !r.contains("c.4.2.1") && !r.contains("c.4.2.2")
 
       test(m"Pattern alternative is exempt"):
         rules("def f(x: Any) = x match\n  case A\n  | B => 1\n")
 
-      . assert: r => !r.contains("C2.1") && !r.contains("C2.2")
+      . assert: r => !r.contains("c.4.2.1") && !r.contains("c.4.2.2")
 
       test(m"Method-selection chain is exempt"):
         rules("val x =\n  foo\n  . bar\n")
 
-      . assert: r => !r.contains("C2.1") && !r.contains("C2.2")
+      . assert: r => !r.contains("c.4.2.1") && !r.contains("c.4.2.2")
 
       test(m"Operator-continuation expression does not trigger 315"):
         rules("def f =\n  val a = 1\n  a == 1 ||\n    a == 2\n")
 
-      . assert: r => !r.contains("P2")
+      . assert: r => !r.contains("c.6.2")
 
       test(m"Trailing operator after a quote-block `}` defers to 616, not 473.6"):
         rules("val x =\n  ' {\n      foo\n    } ::\n    tail\n")
 
-      . assert: r => !r.contains("A9.5")
+      . assert: r => !r.contains("c.2.9.5")
 
     suite(m"Phase 5: Multi-line interpolated strings"):
 
       test(m"Canonical multi-line m-string is accepted"):
         rules("def message =\n  m\"\"\"\n    line one\n    line two\n  \"\"\"\n")
 
-      . assert: r => !r.exists(_.startsWith("A8"))
+      . assert: r => !r.exists(_.startsWith("c.2.8"))
 
       test(m"Heavy-block `( m\"\"\" )` argument form is accepted"):
         rules("val x =\n  ( m\"\"\"\n      content here\n    \"\"\" )\n")
 
-      . assert: r => !r.exists(_.startsWith("A8"))
+      . assert: r => !r.exists(_.startsWith("c.2.8"))
 
       test(m"Content on the opener line is rejected (560.1)"):
         rules("def msg =\n  m\"\"\"the content\n    more\n  \"\"\"\n")
 
-      . assert(_.contains("A8.1"))
+      . assert(_.contains("c.2.8.1"))
 
       test(m"Content not indented +2 is rejected (560.2)"):
         rules("def msg =\n  m\"\"\"\n   content\n  \"\"\"\n")
 
-      . assert(_.contains("A8.2"))
+      . assert(_.contains("c.2.8.2"))
 
       test(m"Under-indented content line is rejected (560.3)"):
         rules("def msg =\n  m\"\"\"\n    first line\n  second\n  \"\"\"\n")
 
-      . assert(_.contains("A8.3"))
+      . assert(_.contains("c.2.8.3"))
 
       test(m"Closer not aligned with opener is rejected (560.4)"):
         rules("def msg =\n  m\"\"\"\n    content\n    \"\"\"\n")
 
-      . assert(_.contains("A8.4"))
+      . assert(_.contains("c.2.8.4"))
 
       test(m"Other interpolators' multi-line content is exempt from 560"):
         rules("def t1 =\n  t\"\"\"\nunindented significant content\n  \"\"\"\n")
 
-      . assert: r => !r.exists(_.startsWith("A8"))
+      . assert: r => !r.exists(_.startsWith("c.2.8"))
 
       test(m"Long content line of a multi-line string is not flagged 230"):
         rules("def msg =\n  m\"\"\"\n    "+"x".repeat(110)+"\n  \"\"\"\n")
 
-      . assert: r => !r.contains("F4")
+      . assert: r => !r.contains("c.1.4")
 
-    suite(m"Phase 7: Umbrella export completeness (L4)"):
+    suite(m"Phase 7: Umbrella export completeness (↯/c.8.4)"):
 
-      test(m"Module not re-exported to the umbrella is rejected (L4)"):
+      test(m"Module not re-exported to the umbrella is rejected (↯/c.8.4)"):
         exportRules("export delta.{Json}\n", List("Json", "NumberMode"))
 
-      . assert(_.contains("L4"))
+      . assert(_.contains("c.8.4"))
 
       test(m"All modules re-exported is accepted"):
         exportRules("export delta.{Json, NumberMode}\n", List("Json", "NumberMode"))
 
-      . assert: r => !r.contains("L4")
+      . assert: r => !r.contains("c.8.4")
 
       test(m"Module exported inside a nested package counts as exported"):
         exportRules
           ( "package formatting:\n  export delta.formatting.NumberMode\n", List("NumberMode") )
 
-      . assert: r => !r.contains("L4")
+      . assert: r => !r.contains("c.8.4")
 
       test(m"Single-selector export without braces is recognised"):
         exportRules("export delta.Json\n", List("Json"))
 
-      . assert: r => !r.contains("L4")
+      . assert: r => !r.contains("c.8.4")
 
       test(m"No violation when there are no sibling modules"):
         exportRules("export delta.{Json}\n", Nil)
 
-      . assert: r => !r.contains("L4")
+      . assert: r => !r.contains("c.8.4")
 
       test(m"An `@unexported` module suppresses the violation"):
         exportRules("export embarcadero.{Image}\n", List("Image", "Timestamp"), Set("Timestamp"))
 
-      . assert: r => !r.contains("L4")
+      . assert: r => !r.contains("c.8.4")
 
       test(m"An `@unexported` module only suppresses the named module"):
         exportRules
           ( "export embarcadero.{Image}\n", List("Image", "Timestamp", "Layer"), Set("Timestamp") )
 
-      . assert(_.contains("L4"))
+      . assert(_.contains("c.8.4"))
 
-    suite(m"Phase 7: Umbrella extension-method export completeness (L5)"):
+    suite(m"Phase 7: Umbrella extension-method export completeness (↯/c.8.5)"):
 
-      test(m"Extension method not re-exported to the umbrella is rejected (L5)"):
+      test(m"Extension method not re-exported to the umbrella is rejected (↯/c.8.5)"):
         extensionExportRules("export epsilon.{x, xp}\n", List("x", "xp", "xml"))
 
-      . assert(_.contains("L5"))
+      . assert(_.contains("c.8.5"))
 
       test(m"All extension methods re-exported is accepted"):
         extensionExportRules("export epsilon.{x, xp, xml}\n", List("x", "xp", "xml"))
 
-      . assert: r => !r.contains("L5")
+      . assert: r => !r.contains("c.8.5")
 
       test(m"No violation when there are no sibling extension methods"):
         extensionExportRules("export epsilon.{x, xp}\n", Nil)
 
-      . assert: r => !r.contains("L5")
+      . assert: r => !r.contains("c.8.5")
 
       test(m"An `@unexported` extension method suppresses the extension violation"):
         extensionExportRules("export epsilon.{x}\n", List("x", "xml"), Set("xml"))
 
-      . assert: r => !r.contains("L5")
+      . assert: r => !r.contains("c.8.5")
 
       test(m"Extract names a single-line extension method"):
         extractedExtensions("extension (value: Text) def xml: Xml = ???\n")
@@ -1486,16 +1486,16 @@ object Tests extends Suite(m"Flare Tests"):
 
       . assert(_ == List(Anchors.FrameKind.DefnRhs, Anchors.FrameKind.ChainCall))
 
-    suite(m"Necessity (D1)"):
+    suite(m"Necessity (↯/c.3.1)"):
 
       test(m"Broken if/then/else that fits on one line is rejected"):
         rules("def f(a: Boolean): Int =\n  if a\n  then 1\n  else 2\n")
 
-      . assert(_.contains("D1"))
+      . assert(_.contains("c.3.1"))
 
       test(m"247 message names the construct kind and width"):
         violations("def f(a: Boolean): Int =\n  if a\n  then 1\n  else 2\n")
-          .filter(_.rule == "D1").map(_.message)
+          .filter(_.rule == "c.3.1").map(_.message)
 
       . assert(_.exists { m => m.contains("if-expression") && m.contains("columns") })
 
@@ -1506,155 +1506,155 @@ object Tests extends Suite(m"Flare Tests"):
             "  then firstAlternativeValue + secondAlternativeValueWithLongName\n" +
             "  else thirdAlternativeValue + fourthAlternativeValueWithLongName\n" )
 
-      . assert: r => !r.contains("D1")
+      . assert: r => !r.contains("c.3.1")
 
       test(m"Multi-line infix chain that fits on one line is rejected"):
         rules("val x = 1 +\n  2\n")
 
-      . assert(_.contains("D1"))
+      . assert(_.contains("c.3.1"))
 
       test(m"Multi-line infix chain that does not fit is accepted"):
         rules
           ( "val veryLongValueName = firstOperandWithAnExtremelyLongName +\n" +
             "  secondOperandWithAnEvenLongerNameThatOverflowsTheLimit\n" )
 
-      . assert: r => !r.contains("D1")
+      . assert: r => !r.contains("c.3.1")
 
       test(m"Brace lambda with its body on a later line is rejected"):
         rules("val y = List(1).map { x =>\n  x + 1 }\n")
 
-      . assert(_.contains("D1"))
+      . assert(_.contains("c.3.1"))
 
       test(m"Colon-arg lambda with a short body on a later line is rejected"):
         rules("def f(xs: List[Int]): List[Int] =\n  xs.map: x =>\n    x + 1\n")
 
-      . assert(_.contains("D1"))
+      . assert(_.contains("c.3.1"))
 
       test(m"Broken if containing a comment is accepted"):
         rules("def f(a: Boolean): Int =\n  if a // choose\n  then 1\n  else 2\n")
 
-      . assert: r => !r.contains("D1")
+      . assert: r => !r.contains("c.3.1")
 
       test(m"Broken if containing a colon-block line is accepted"):
         rules("def f(a: Boolean): Int =\n  if a then bar:\n    1\n  else 2\n")
 
-      . assert: r => !r.contains("D1")
+      . assert: r => !r.contains("c.3.1")
 
       test(m"Chain broken around a blank interior line is accepted"):
         rules("val x = 1 +\n\n  2\n")
 
-      . assert: r => !r.contains("D1")
+      . assert: r => !r.contains("c.3.1")
 
       test(m"Chain containing a multi-line string is accepted"):
         rules("val s = a +\n  \"\"\"line1\nline2\"\"\"\n")
 
-      . assert: r => !r.contains("D1")
+      . assert: r => !r.contains("c.3.1")
 
       test(m"If with a multi-statement then-block is accepted"):
         rules("def f(a: Boolean): Int =\n  if a then\n    val b = 1\n    b + 1\n  else 2\n")
 
-      . assert: r => !r.contains("D1")
+      . assert: r => !r.contains("c.3.1")
 
       test(m"Broken while that fits on one line is rejected"):
         rules("def f(): Unit =\n  while cond\n  do work()\n")
 
-      . assert(_.contains("D1"))
+      . assert(_.contains("c.3.1"))
 
       test(m"For with single-line generators and broken yield is rejected"):
         rules("val x =\n  for i <- List(1)\n  yield i\n")
 
-      . assert(_.contains("D1"))
+      . assert(_.contains("c.3.1"))
 
       test(m"For whose generators span several lines is accepted"):
         rules("val x =\n  for\n    i <- List(1)\n    j <- List(2)\n  yield i\n")
 
-      . assert: r => !r.contains("D1")
+      . assert: r => !r.contains("c.3.1")
 
       test(m"Broken try/finally that fits on one line is rejected"):
         rules("def f(): Int =\n  try compute()\n  finally cleanup()\n")
 
-      . assert(_.contains("D1"))
+      . assert(_.contains("c.3.1"))
 
       test(m"Broken try with a catch case is accepted"):
         rules("def f(): Int =\n  try compute()\n  catch case e: Exception => 0\n")
 
-      . assert: r => !r.contains("D1")
+      . assert: r => !r.contains("c.3.1")
 
-    suite(m"S1: unsafe naming"):
+    suite(m"↯/c.9.1: unsafe naming"):
       test(m"A gated method with the prefix is accepted"):
         gatedRules("def unsafeRead(n: Int)(using erased Unsafe): Int = n\n")
 
-      . assert: r => !r.exists(_.startsWith("S1"))
+      . assert: r => !r.exists(_.startsWith("c.9.1"))
 
       test(m"A gated method without the prefix is rejected"):
         gatedRules("def raw(using erased Unsafe): Int = 1\n")
 
-      . assert(_.contains("S1.1"))
+      . assert(_.contains("c.9.1.1"))
 
       test(m"A prefixed method with no token is rejected"):
         gatedRules("def unsafeRead(n: Int): Int = n\n")
 
-      . assert(_.contains("S1.2"))
+      . assert(_.contains("c.9.1.2"))
 
       test(m"An ungated, unprefixed method is accepted"):
         gatedRules("def read(n: Int): Int = n\n")
 
-      . assert: r => !r.exists(_.startsWith("S1"))
+      . assert: r => !r.exists(_.startsWith("c.9.1"))
 
       test(m"A named using parameter is a gate"):
         gatedRules("def raw(using unsafe: Unsafe): Int = 1\n")
 
-      . assert(_.contains("S1.1"))
+      . assert(_.contains("c.9.1.1"))
 
       test(m"A qualified token is a gate"):
         gatedRules("def raw(using erased vacuous.Unsafe): Int = 1\n")
 
-      . assert(_.contains("S1.1"))
+      . assert(_.contains("c.9.1.1"))
 
       test(m"A non-using parameter of token type is not a gate"):
         gatedRules("def unsafeRead(token: Unsafe): Int = 1\n")
 
-      . assert(_.contains("S1.2"))
+      . assert(_.contains("c.9.1.2"))
 
       test(m"A method named exactly `unsafe` must take the token"):
         gatedRules("def unsafe(n: Int): Int = n\n")
 
-      . assert(_.contains("S1.2"))
+      . assert(_.contains("c.9.1.2"))
 
       test(m"unsafely is exempt from the prefix rule"):
         gatedRules("def unsafely[result](block: () => result): result = block()\n")
 
-      . assert: r => !r.exists(_.startsWith("S1"))
+      . assert: r => !r.exists(_.startsWith("c.9.1"))
 
       test(m"An extension method is checked"):
         gatedRules("extension (n: Int)\n  def raw(using erased Unsafe): Int = n\n")
 
-      . assert(_.contains("S1.1"))
+      . assert(_.contains("c.9.1.1"))
 
       test(m"A gated apply is rejected, having no name to prefix"):
         gatedRules("object A:\n  def apply(n: Int)(using erased Unsafe): Int = n\n")
 
-      . assert(_.contains("S1.1"))
+      . assert(_.contains("c.9.1.1"))
 
       test(m"A gated given is exempt, being summoned by type"):
         gatedRules("given reader: (Unsafe ?=> Int) = 1\n")
 
-      . assert: r => !r.exists(_.startsWith("S1"))
+      . assert: r => !r.exists(_.startsWith("c.9.1"))
 
       test(m"A constructor taking the token is exempt"):
         gatedRules("class Wrapper(n: Int)(using erased Unsafe)\n")
 
-      . assert: r => !r.exists(_.startsWith("S1"))
+      . assert: r => !r.exists(_.startsWith("c.9.1"))
 
       test(m"The rule does not fire when no token is configured"):
         rules("def raw(using erased Unsafe): Int = 1\n")
 
-      . assert: r => !r.exists(_.startsWith("S1"))
+      . assert: r => !r.exists(_.startsWith("c.9.1"))
 
       test(m"The rule does not fire on a prefixed name without a token"):
         rules("def unsafeRead(n: Int): Int = n\n")
 
-      . assert: r => !r.exists(_.startsWith("S1"))
+      . assert: r => !r.exists(_.startsWith("c.9.1"))
 
     suite(m"Metrics census"):
       test(m"While loops are counted"):
@@ -1752,14 +1752,38 @@ object Tests extends Suite(m"Flare Tests"):
 
     suite(m"Config option parsing"):
       test(m"A semicolon-separated list parses, the comma being unusable via -P"):
-        Config.parse(List("omit=L4;S"))(0).omitted
+        Config.parse(List("omit=c.8.4;c.9"))(0).omitted
 
-      . assert(_ == Set("L4", "S"))
+      . assert(_ == Set("c.8.4", "c.9"))
 
       test(m"A repeated strict option accumulates"):
-        Config.parse(List("strict=S1", "strict=L4"))(0).strict
+        Config.parse(List("strict=c.9.1", "strict=↯/c.8.4"))(0).strict
 
-      . assert(_ == Set("S1", "L4"))
+      . assert(_ == Set("c.9.1", "↯/c.8.4"))
+
+      test(m"An option error is labelled with its code"):
+        Config.parse(List("nonsense=1"))(1).map(_.takeWhile(_ != ' '))
+
+      . assert(_ == List("[↯/f.21.3.6]"))
+
+      test(m"An entry in the letter form is reported with the code it now is"):
+        Config.parse(List("omit=L4", "strict=S;A2.1"))(1)
+
+      . assert:
+          _ == List
+            ( "[↯/f.21.3.9] `A2.1` is now `c.2.2.1`; name a rule by its code",
+              "[↯/f.21.3.9] `L4` is now `c.8.4`; name a rule by its code",
+              "[↯/f.21.3.9] `S` is now `c.9`; name a rule by its code" )
+
+      test(m"An entry in the letter form which names a project rule is not reported"):
+        Config.parse(List("rule=L4:invokes:asInstanceOf", "omit=L4"))(1)
+
+      . assert(_ == Nil)
+
+      test(m"A letter identifier migrates to its code"):
+        List("F4", "A2.1", "T1.2", "S", "cast", "c.1.4").map(Rules.migrated)
+
+      . assert(_ == List(Some("c.1.4"), Some("c.2.2.1"), Some("c.7.1.2"), Some("c.9"), None, None))
 
       test(m"A gate parses with its prefix"):
         Config.parse(List("gate=vacuous.Unsafe:unsafe"))(0).gates
@@ -1806,15 +1830,25 @@ object Tests extends Suite(m"Flare Tests"):
 
       . assert(_.length == 1)
 
-      test(m"A strict entry selects a rule and its sub-rules but not a longer id"):
-        (Config.selects("S1", "S1"), Config.selects("S1", "S1.2"), Config.selects("S1", "S12"))
+      test(m"A strict entry selects a rule and its variants but not a longer code"):
+        List("c.9.1", "c.9.1.2", "c.9.12").map(Config.selects("c.9.1", _))
 
-      . assert(_ == (true, true, false))
+      . assert(_ == List(true, true, false))
 
-      test(m"A principle letter selects every rule of the principle"):
-        (Config.selects("S", "S1.1"), Config.selects("S", "Sx"))
+      test(m"A principle's code selects every rule of the principle"):
+        (Config.selects("c.9", "c.9.1.1"), Config.selects("c.9", "c.91.1"))
 
       . assert(_ == (true, false))
+
+      test(m"An entry may begin with ↯/"):
+        (Config.selects("↯/c.8.4", "c.8.4"), Config.selects("↯/c.8", "c.8.4"))
+
+      . assert(_ == (true, true))
+
+      test(m"A letter identifier selects nothing"):
+        (Config.selects("S1", "c.9.1"), Config.selects("S", "c.9.1.1"))
+
+      . assert(_ == (false, false))
 
       test(m"A project rule is selected by its exact name"):
         (Config.selects("cast", "cast"), Config.selects("cast", "casting"))
@@ -1986,24 +2020,32 @@ object Tests extends Suite(m"Flare Tests"):
         val source = stub("def privilegedRead(using erased Privileged): Int = 1\n")
         Checker.check("<test>", Some("flare"), source, config = privileged).toList.map(_.rule)
 
-      . assert: r => !r.exists(_.startsWith("S1"))
+      . assert: r => !r.exists(_.startsWith("c.9.1"))
 
     suite(m"Omitted and strict rules"):
       test(m"An omitted rule does not fire"):
-        val omitting = config.copy(omitted = Set("F7"))
+        val omitting = config.copy(omitted = Set("c.1.7"))
         val source = stub("val x = 1 \n")
         Checker.check("<test>", Some("flare"), source, config = omitting).toList.map(_.rule)
 
-      . assert(!_.contains("F7"))
+      . assert(!_.contains("c.1.7"))
 
       test(m"An omitted principle removes every rule of it"):
-        Rules.enabled(config.copy(omitted = Set("F"))).map(_.id).exists(_.startsWith("F"))
+        val enabled = Rules.enabled(config.copy(omitted = Set("c.1"))).map(_.id)
+        (enabled.exists(_.startsWith("c.1.")), enabled.exists(_.startsWith("c.2.")))
 
-      . assert(_ == false)
+      . assert(_ == (false, true))
+
+      test(m"A project rule's enforcement does not touch the style's rules"):
+        val c = Definition("c", List(Predicate("invokes", "asInstanceOf")), None, "error")
+        val enforcing = config.copy(rules = List(c), enforced = Map("c" -> Some("error")))
+        Linter.severity(enforcing, "c.1.7")
+
+      . assert(_ == Linter.Severity.Warning)
 
       test(m"A strict rule is an error and the rest are warnings"):
-        val strict = config.copy(strict = Set("F7"))
-        (Linter.severity(strict, "F7"), Linter.severity(strict, "F4"))
+        val strict = config.copy(strict = Set("c.1.7"))
+        (Linter.severity(strict, "c.1.7"), Linter.severity(strict, "c.1.4"))
 
       . assert(_ == (Linter.Severity.Error, Linter.Severity.Warning))
 
@@ -2027,18 +2069,18 @@ object Tests extends Suite(m"Flare Tests"):
       test(m"A file beginning with the header is accepted"):
         rules("val x = 1\n")
 
-      . assert(!_.contains("F1"))
+      . assert(!_.contains("c.1.1"))
 
       test(m"A differing header line is reported at that line"):
         val text = stub("val x = 1\n").replaceFirst("x\n", "y\n")
         Checker.check("<test>", Some("flare"), text, config = config).toList
-        . filter(_.rule == "F1").map(_.line)
+        . filter(_.rule == "c.1.1").map(_.line)
 
       . assert(_ == List(2))
 
       test(m"A file shorter than the header is reported"):
         Checker.check("<test>", Some("flare"), "/*\nx\n", config = config).toList
-        . filter(_.rule == "F1").map(_.line)
+        . filter(_.rule == "c.1.1").map(_.line)
 
       . assert(_ == List(3))
 
@@ -2059,7 +2101,33 @@ object Tests extends Suite(m"Flare Tests"):
         Checker.check("<test>", Some("flare"), "package flare\n\nval x = 1\n",
             config = config.copy(header = None)).toList.map(_.rule)
 
-      . assert: r => !r.exists(Set("F1", "F2", "F3"))
+      . assert: r => !r.exists(Set("c.1.1", "c.1.2", "c.1.3"))
+
+    suite(m"Bolt codes"):
+      test(m"A violation of a style rule is reported under ↯/f.21.1, carrying the rule's code"):
+        FlareBolts.prefix("c.2.2.1", false)
+
+      . assert(_ == "[↯/f.21.1/c.2.2.1] ")
+
+      test(m"A violation of a project rule is reported under ↯/f.21.2, with its name"):
+        FlareBolts.prefix("cast", false)
+
+      . assert(_ == "[↯/f.21.2] cast: ")
+
+      test(m"A code is coloured as fulminate colours it"):
+        FlareBolts.colorLabel("f.21.1/c.2.2.1")
+
+      . assert(_ == Bolt('f', 21, 1, cause = Bolt('c', 2, 2, 1)).colorLabel.toString)
+
+      test(m"A coloured violation begins with the coloured code"):
+        FlareBolts.prefix("c.1.4", true)
+
+      . assert(_ == Bolt('f', 21, 1, cause = Bolt('c', 1, 4)).colorLabel.toString+" ")
+
+      test(m"Every rule of the style is identified by a code"):
+        Rules.style.map(_.id).filterNot(Rules.styled)
+
+      . assert(_ == Nil)
 
     suite(m"Linter"):
       test(m"The linter reports violations with severities and the census"):
@@ -2072,12 +2140,14 @@ object Tests extends Suite(m"Flare Tests"):
 
         val severities =
           report.violations.map { v => (v(0).rule, v(1)) }.filter: v =>
-            v(0) == "casts" || v(0) == "F7"
+            v(0) == "casts" || v(0) == "c.1.7"
 
         (severities, report.census.toMap.get("casts"), report.errors)
 
       . assert: outcome =>
-          val severities = List(("F7", Linter.Severity.Warning), ("casts", Linter.Severity.Error))
+          val severities =
+            List(("c.1.7", Linter.Severity.Warning), ("casts", Linter.Severity.Error))
+
           outcome == (severities, Some(1), true)
 
       test(m"Every rule is a parser rule"):

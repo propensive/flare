@@ -84,7 +84,7 @@ object Statements:
           // We include the trailing expression so the last → second-to-last
           // adjacency is checked too. Single-line stats with no multi-line
           // neighbour are collected but produce no violations downstream;
-          // P2 only fires when at least one of an adjacent pair is
+          // ↯/c.6.2 only fires when at least one of an adjacent pair is
           // multi-line.
           collect(b.stats :+ b.expr, source).foreach(out += _)
 

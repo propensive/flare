@@ -37,7 +37,7 @@ import scala.collection.mutable
 import dotty.tools.dotc.util.SourceFile
 
 object ProximityRules:
-  // P2: a **chunk** — any statement (or expression at statement position)
+  // ↯/c.6.2: a **chunk** — any statement (or expression at statement position)
   // that spans two or more source lines — must be separated from its
   // siblings by a blank line. A chunk that's the first member of its
   // enclosing scope is exempt from "preceded-by-blank" by construction
@@ -45,12 +45,12 @@ object ProximityRules:
   // the rule.
   //
   // This rule generalises and supersedes the prior 982 ("blank before
-  // multi-line `case`") and the multi-line side of P2 ("sibling-
+  // multi-line `case`") and the multi-line side of ↯/c.6.2 ("sibling-
   // declaration padding"): both are instances of the same principle.
   // Single-line declarations can still sit adjacent with zero blanks
   // between them — only chunks compel a separator.
   object ChunkSeparation extends Rule:
-    def id: String = "P2"
+    def id: String = "c.6.2"
     def principle: Principle = Principle.Proximity
 
     def check(ctx: Context): List[Violation] =
@@ -79,7 +79,7 @@ object ProximityRules:
             // for control-flow constructs like `if cond then\n  body`).
             out +=
               Violation
-                ( file, prev.endLine + 1, 1, "P2",
+                ( file, prev.endLine + 1, 1, "c.6.2",
                   "a multi-line statement must be separated from its siblings by a blank line" )
 
           i += 1
@@ -90,7 +90,7 @@ object ProximityRules:
     // operator (`||`, `&&`, `+`, `==`, `::`, `.`, `?`, etc.) extend the
     // previous expression, even though dotty may parse the boundary as
     // two separate `Block` stats. Inserting a blank line between them
-    // would actually break the operator continuation, so P2 must not
+    // would actually break the operator continuation, so ↯/c.6.2 must not
     // fire on these.
     private def startsWithContinuationOperator
       ( content: String, source: SourceFile, line: Int )
@@ -129,12 +129,12 @@ object ProximityRules:
             val c = content.charAt(i)
             "|&+-*/<>=!~^%?.:".indexOf(c) >= 0
 
-    // Symmetric to `startsWithContinuationOperator`: with C2 the operator of a
+    // Symmetric to `startsWithContinuationOperator`: with ↯/c.4.2 the operator of a
     // wrapped expression sits at the END of the first line, so a parser-split
     // boundary lies inside an operator chain when the previous statement's last
     // line — or the current statement's first line (a multi-line operand
     // expression) — ends with a symbolic infix operator. Inserting a blank line
-    // there would break the continuation, so P2 must skip it.
+    // there would break the continuation, so ↯/c.6.2 must skip it.
     private def endsWithContinuationOperator
       ( content: String, source: SourceFile, prevEndLine: Int, curStartLine: Int )
     :   Boolean =
@@ -142,7 +142,7 @@ object ProximityRules:
       lineEndsWithContinuationOperator(content, source, prevEndLine) ||
         lineEndsWithContinuationOperator(content, source, curStartLine)
 
-    // Trailing tokens that end a line but are NOT C2 infix continuations: a
+    // Trailing tokens that end a line but are NOT ↯/c.4.2 infix continuations: a
     // definition/assignment `=`, the case/lambda `=>`/`?=>`, a colon-block `:`,
     // a generator `<-`, and type bounds `<:`/`>:`. A line ending in one of these
     // opens a body or clause, not a wrapped operand.
@@ -182,13 +182,13 @@ object ProximityRules:
 
             precededBySpace && !NonContinuationTrailers.contains(content.substring(j, last + 1).nn)
 
-  // P4: the return-type line of a heavy signature — one that begins with
+  // ↯/c.6.4: the return-type line of a heavy signature — one that begins with
   // `:` followed by exactly three spaces and ends with the body-introducing
   // `=` — must be separated from the body that follows it by a blank line.
   // The signature and the body are distinct in kind, and the blank line
   // keeps that distinction visible.
   object ReturnTypeBlank extends Rule:
-    def id: String = "P4"
+    def id: String = "c.6.4"
     def principle: Principle = Principle.Proximity
 
     def check(ctx: Context): List[Violation] =
@@ -204,7 +204,7 @@ object ProximityRules:
           if !line.isBlank then
             out +=
               Violation
-                ( ctx.file, lineNum, 1, "P4",
+                ( ctx.file, lineNum, 1, "c.6.4",
                   "a blank line is required between a heavy-signature return type and the body" )
 
           prevWasReturnType = false
@@ -218,7 +218,7 @@ object ProximityRules:
       rest.length >= 2 && rest(0).text == ":" && rest(1).kind == Sort.Space &&
         rest(1).text == "   " && rest.lastOption.exists(_.text == "=")
 
-  // P3: at most ONE blank line separates anything from anything —
+  // ↯/c.6.3: at most ONE blank line separates anything from anything —
   // with a single exception grounded in the Proximity principle's gap
   // scale (none < space < newline < blank < two blanks): a run of up to
   // two blank lines is permitted immediately before the first line, or
@@ -227,7 +227,7 @@ object ProximityRules:
   // The extra gap marks the heaviest construct the scale recognises.
   // Every blank line beyond the permitted count fires once.
   object BlankLineRun extends Rule:
-    def id: String = "P3"
+    def id: String = "c.6.3"
     def principle: Principle = Principle.Proximity
 
     def check(ctx: Context): List[Violation] =
@@ -253,7 +253,7 @@ object ProximityRules:
             while extra < idx do
               out +=
                 Violation
-                  ( ctx.file, extra + 1, 1, "P3",
+                  ( ctx.file, extra + 1, 1, "c.6.3",
                     if allowed == 2 then "more than two consecutive blank lines"
                     else
                       "more than one consecutive blank line (two are permitted only around " +
@@ -329,16 +329,16 @@ object ProximityRules:
       rest.length >= 2 && rest(0).text == ":" && rest(1).kind == Sort.Space &&
         rest(1).text == "   " && rest.lastOption.exists(_.text == "=")
 
-  // P6: an annotation must sit directly above the declaration it
-  // annotates. A blank line between them fires P6.2 (at the blank line,
+  // ↯/c.6.6: an annotation must sit directly above the declaration it
+  // annotates. A blank line between them fires ↯/c.6.6.2 (at the blank line,
   // which also clears the pending annotation, so a run of blanks fires
   // only once); an annotation that is never followed by another line at
-  // all — the end-of-file flush — fires P6.1 at the annotation's own
+  // all — the end-of-file flush — fires ↯/c.6.6.1 at the annotation's own
   // line. `ctx.annotationEndLines` supplies the final line of every
   // annotation from the tree, so multi-line annotations arm the check on
   // their last line only.
   object AnnotationAdjacency extends Rule:
-    def id: String = "P6"
+    def id: String = "c.6.6"
     def principle: Principle = Principle.Proximity
 
     def check(ctx: Context): List[Violation] =
@@ -355,7 +355,7 @@ object ProximityRules:
           if prevWasAnnotation then
             out +=
               Violation
-                ( ctx.file, lineNum, 1, "P6.2",
+                ( ctx.file, lineNum, 1, "c.6.6.2",
                   "blank line is not permitted between an annotation and the declaration " +
                     "it annotates" )
 
@@ -369,12 +369,12 @@ object ProximityRules:
       if prevWasAnnotation then
         out +=
           Violation
-            ( ctx.file, prevLineNum, 1, "P6.1", "annotation is not followed by a declaration" )
+            ( ctx.file, prevLineNum, 1, "c.6.6.1", "annotation is not followed by a declaration" )
 
       out.toList
 
-  // P1/P1: comma spacing. No space is permitted before a comma
-  // (P1.1) and exactly one space is required after it (P1.2) — except
+  // ↯/c.6.1: comma spacing. No space is permitted before a comma
+  // (↯/c.6.1.1) and exactly one space is required after it (↯/c.6.1.2) — except
   // when the extra spaces are part of a multi-row alignment column. A
   // line's multi-space comma sites are deferred rather than fired when
   // the alignment question is still open: the line "continues" an
@@ -384,7 +384,7 @@ object ProximityRules:
   // are never cancelled — including any still pending at end of file —
   // are flushed.
   object CommaSpacing extends Rule:
-    def id: String = "P1"
+    def id: String = "c.6.1"
     def principle: Principle = Principle.Proximity
 
     def check(ctx: Context): List[Violation] =
@@ -409,7 +409,7 @@ object ProximityRules:
             if i > 0 && arr(i - 1).kind == Sort.Space && arr(i - 1).text.length > 0 then
               out +=
                 Violation
-                  ( ctx.file, lineNum, cols(i), "P1.1", "no space is permitted before a comma" )
+                  ( ctx.file, lineNum, cols(i), "c.6.1.1", "no space is permitted before a comma" )
 
             if i + 1 < arr.length then
               val next = arr(i + 1)
@@ -417,7 +417,7 @@ object ProximityRules:
               if next.kind != Sort.Space then
                 out +=
                   Violation
-                    ( ctx.file, lineNum, cols(i + 1), "P1.2",
+                    ( ctx.file, lineNum, cols(i + 1), "c.6.1.2",
                       "exactly one space is required after a comma" )
               else if next.text != " " then
                 // Extra spaces after comma — possibly part of a multi-row
@@ -430,7 +430,7 @@ object ProximityRules:
                 if !next.text.startsWith("\n") then
                   deferred +=
                     Violation
-                      ( ctx.file, lineNum, cols(i + 1), "P1.2",
+                      ( ctx.file, lineNum, cols(i + 1), "c.6.1.2",
                         "exactly one space is required after a comma" )
 
           i += 1

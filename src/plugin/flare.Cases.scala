@@ -52,8 +52,8 @@ case class CaseInfo
     bodyStartsAfterArrow: Boolean )
 
 object Cases:
-  // Group every `case` arm by its enclosing `Match` or `Try.cases`. T1 and
-  // P2 both reason within one such group: alignment of `=>` columns within
+  // Group every `case` arm by its enclosing `Match` or `Try.cases`. ↯/c.7.1 and
+  // ↯/c.6.2 both reason within one such group: alignment of `=>` columns within
   // a run of single-line cases, and the blank-line-before requirement for a
   // multi-line case that follows an earlier case at the same indent.
   def extract(tree: untpd.Tree, source: SourceFile): List[List[CaseInfo]] =
@@ -116,7 +116,7 @@ object Cases:
         // line instead.
         val isSingleLine = endLine == caseLine
         // Count contiguous spaces immediately before `=>` (only relevant
-        // for multi-line cases — A2 sub-check requires exactly one).
+        // for multi-line cases — ↯/c.2.2 sub-check requires exactly one).
         var k = arrowOffset - 1
         while k >= 0 && content.charAt(k) == ' ' do k -= 1
         val spacesBeforeArrow = arrowOffset - 1 - k
@@ -128,7 +128,7 @@ object Cases:
         // A guard that spans multiple source lines (typically an indented
         // `if\n  cond1\n  && cond2`) forces the `=>` to live on its own
         // line dedented from the guard — the Scala parser needs that
-        // dedent to terminate the indented guard expression. A2's
+        // dedent to terminate the indented guard expression. ↯/c.2.2's
         // "trail the last pattern token" rule therefore does not apply
         // here.
         val guardMultiLine =

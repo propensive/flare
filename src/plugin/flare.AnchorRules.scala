@@ -36,7 +36,7 @@ import scala.collection.mutable
 
 object AnchorRules:
   // -----------------------------------------------------------------------
-  // A2: keyword-sequence layout (`if`/`then`/`else`, `for`/`yield`,
+  // ↯/c.2.2: keyword-sequence layout (`if`/`then`/`else`, `for`/`yield`,
   // `for`/`do`, `while`/`do`, `try`/`catch`/`finally`).
   //
   // The chain elements (K₁, K₂, …) and their positions are extracted from
@@ -48,13 +48,13 @@ object AnchorRules:
   // (line L, column C) of K_1 (or the leftmost modifier prefix such as
   // `inline` / `transparent inline`, when present).
   //
-  //   * Keyword placement (A2.1): every subsequent keyword K_i (i ≥ 2) is
+  //   * Keyword placement (↯/c.2.2.1): every subsequent keyword K_i (i ≥ 2) is
   //     either **inline** (starts on line L) or **broken** (starts a new
   //     line in column C). Once any K_i is broken, every later K_j must
   //     also be broken — i.e. the chain has a single break point,
   //     keywords before it on line L, keywords from it on their own lines
   //     in column C.
-  //   * Body cascade (A2.2): once any B_i (i ≥ 2) is indented onto its
+  //   * Body cascade (↯/c.2.2.2): once any B_i (i ≥ 2) is indented onto its
   //     own line(s), every later body must be indented too. B_1 (the
   //     condition of `if`/`while`, the generators of `for`, the body of
   //     `try`) is exempt.
@@ -86,7 +86,7 @@ object AnchorRules:
   // require K_1..K_{i-1} to break.
   // -----------------------------------------------------------------------
   object SequenceLayout extends Rule:
-    def id: String = "A2"
+    def id: String = "c.2.2"
     def principle: Principle = Principle.Anchoring
 
     def check(ctx: Context): List[Violation] =
@@ -113,7 +113,7 @@ object AnchorRules:
         if !(onAnchorLine || brokenAtCol) then
           out +=
             Violation
-              ( file, elem.line, elem.col, "A2.1",
+              ( file, elem.line, elem.col, "c.2.2.1",
                 s"keyword `${elem.label}` must start on the same line as " +
                   s"`${anchor.label}` (line $anchorLine) or on a new line in " +
                   s"column $anchorCol (found line ${elem.line}, column ${elem.col})" )
@@ -122,14 +122,14 @@ object AnchorRules:
         if indentedMode && !elem.bodyIndented then
           out +=
             Violation
-              ( file, elem.line, elem.bodyCol, "A2.2",
+              ( file, elem.line, elem.bodyCol, "c.2.2.2",
                 s"body after `${elem.label}` must be indented onto a new line because " +
                   s"an earlier body in this sequence is" )
 
         if elem.bodyIndented then indentedMode = true
         i += 1
 
-  // A3: a definition's type-annotation `:` must sit either on the same
+  // ↯/c.2.3: a definition's type-annotation `:` must sit either on the same
   // line as the definition's anchor or in the anchor's column.
   //
   // Definition anchors are extracted from the untyped tree (see
@@ -137,7 +137,7 @@ object AnchorRules:
   // stream's bracket-nesting heuristics. The parser pairs each `:`
   // with its containing `ValOrDefDef` for us.
   object DefinitionAnchors extends Rule:
-    def id: String = "A3"
+    def id: String = "c.2.3"
     def principle: Principle = Principle.Anchoring
 
     def check(ctx: Context): List[Violation] =
@@ -145,7 +145,7 @@ object AnchorRules:
         if a.colonLine != a.anchorLine && a.colonCol != a.anchorCol then
           List
             ( Violation
-                ( ctx.file, a.colonLine, a.colonCol, "A3",
+                ( ctx.file, a.colonLine, a.colonCol, "c.2.3",
                   s"type-annotation `:` should align with the definition's anchor at " +
                     s"column ${a.anchorCol} (found ${a.colonCol})" ) )
         else
@@ -168,7 +168,7 @@ object AnchorRules:
   // Tokens that, at the end of a code line, signal "the next line is a
   // body" (lambda body, assignment RHS, block content, keyword-sequence
   // body, etc.) rather than a heavy-bracket continuation of the current
-  // line's expression. Used to skip A4's anchor check on those lines.
+  // line's expression. Used to skip ↯/c.2.4's anchor check on those lines.
   private val BodyOpenerTerminators: Set[String] =
     Set
       ( "=", "=>", ":", ";", "match",
@@ -235,7 +235,7 @@ object AnchorRules:
 
   // A line whose leading `(`/`[` group is immediately followed by `=>` is a
   // lambda (or polymorphic-function) parameter list, not a heavy argument
-  // continuation, so A4 must not flag it.
+  // continuation, so ↯/c.2.4 must not flag it.
   private def lineOpensLambda(rest: IndexedSeq[Lexeme]): Boolean =
     val sem = rest.filter: t => t.kind != Sort.Space && t.kind != Sort.Comment
 
@@ -259,7 +259,7 @@ object AnchorRules:
       close >= 0 && sem.lift(close + 1).exists(_.text == "=>")
     }
 
-  // A4: a line whose first semantic token is `(` or `[` is a "heavy
+  // ↯/c.2.4: a line whose first semantic token is `(` or `[` is a "heavy
   // argument block" applied to the previous line's expression. That
   // expression must be **tight** so the `(`/`[` attaches unambiguously
   // to the entire previous line's content rather than to some mid-line
@@ -277,7 +277,7 @@ object AnchorRules:
   //   `(`-depth from a previous line) — the `(` is not a heavy
   //   continuation but interior content of an enclosing bracket.
   object HeavyBracketAnchor extends Rule:
-    def id: String = "A4"
+    def id: String = "c.2.4"
     def principle: Principle = Principle.Anchoring
 
     def check(ctx: Context): List[Violation] =
@@ -317,7 +317,7 @@ object AnchorRules:
         else if BodyOpenerTerminators.contains(prevTok) then ()
         // If the previous line ends with a symbolic infix operator, the
         // current `(`/`[` begins the right-hand operand of that operator —
-        // an operator continuation governed by C2, not a heavy argument
+        // an operator continuation governed by ↯/c.4.2, not a heavy argument
         // block. Skip.
         else if Scans.isSymbolicOperator(prevTok) then ()
         // If the previous line opened a block, quote or splice (ending in
@@ -330,7 +330,7 @@ object AnchorRules:
         else
           out +=
             Violation
-              ( ctx.file, lineNum, line.leadingCols + 1, "A4",
+              ( ctx.file, lineNum, line.leadingCols + 1, "c.2.4",
                 "heavy `(`/`[` continuation must follow a tight expression on its " +
                   "own line; the preceding line contains a top-level operator or " +
                   "assignment, so the anchor is mid-line" )
@@ -358,7 +358,7 @@ object AnchorRules:
       out.toList
 
   // ------------------------------------------------------------------------
-  // Shared lexical tables for the indentation rules (A5/A1). Both rules
+  // Shared lexical tables for the indentation rules (↯/c.2.5 and ↯/c.2.1). Both rules
   // suspend inside brackets and braces left open by an earlier line, so a
   // single linear pre-scan computes, for each line, the bracket state carried
   // *into* it: the count of unclosed `(`/`[` openers from earlier lines, the
@@ -441,21 +441,21 @@ object AnchorRules:
 
   // Keyword-sequence heads (`if/then/else`, `while/do`, `for/yield`,
   // `try/catch/finally`). Lines headed by one of these keep their own anchor
-  // (A2.x) and never open a A5 scope of their own.
+  // (↯/c.2.2.x) and never open a ↯/c.2.5 scope of their own.
   private val SequenceStarters: Set[String] =
     Set("if", "while", "for", "try", "then", "else", "do", "yield", "catch", "finally")
 
   private final class Scope(val anchorCol: Int, val openLine: Int):
     var bodySeen: Boolean = false
 
-  // The core scan shared by A5 (which emits its violations) and A1
+  // The core scan shared by ↯/c.2.5 (which emits its violations) and ↯/c.2.1
   // (which suppresses itself on each scope's first body line). The scope
   // inventory comes from the tree-derived anchor model (`ctx.anchors`):
   // every frame's opener line opens one scope, except `ChainCall` frames
-  // (their +4 body indent is governed by A1's deep-step allowance),
-  // `QuoteSplice` frames (governed by A9.1–.6), keyword-sequence starter
-  // lines (governed by A2.x), and `=>`-led given-signature continuation
-  // lines (governed by A7/A7).
+  // (their +4 body indent is governed by ↯/c.2.1's deep-step allowance),
+  // `QuoteSplice` frames (governed by ↯/c.2.9.1–↯/c.2.9.6), keyword-sequence starter
+  // lines (governed by ↯/c.2.2.x), and `=>`-led given-signature continuation
+  // lines (governed by ↯/c.2.7).
   //
   // Anchor semantics: the scope's anchor is the *opener* line's leading
   // column (for `DefnRhs` frames this is the `=` line, not the model's
@@ -521,7 +521,7 @@ object AnchorRules:
             if line.leadingCols != top.anchorCol + 2 then
               out +=
                 Violation
-                  ( ctx.file, lineNum, line.leadingCols + 1, "A5",
+                  ( ctx.file, lineNum, line.leadingCols + 1, "c.2.5",
                     s"indented scope body must be indented to column ${top.anchorCol + 3} " +
                       s"(anchor + 2); found column ${line.leadingCols + 1}" )
 
@@ -545,17 +545,17 @@ object AnchorRules:
 
     (out.toList, bodyLines.toSet)
 
-  // A5: the body of an indented scope (a colon-block `recv:`, a `match`,
+  // ↯/c.2.5: the body of an indented scope (a colon-block `recv:`, a `match`,
   // a lambda/`case` arrow `=>`, or a definition `=` RHS) must sit at exactly
-  // anchor + 2. Bracket and quote interiors are governed by B4/B5/A9.
+  // anchor + 2. Bracket and quote interiors are governed by ↯/c.5.4, ↯/c.5.5 and ↯/c.2.9.
   object BodyScopeIndent extends Rule:
-    def id: String = "A5"
+    def id: String = "c.2.5"
     def principle: Principle = Principle.Anchoring
 
     def check(ctx: Context): List[Violation] =
       bodyScopeScan(ctx, CarriedDepths(ctx))(0)
 
-  // A1: a non-blank code line cannot be indented more than two columns
+  // ↯/c.2.1: a non-blank code line cannot be indented more than two columns
   // deeper than the previous code line. This forbids "alignment" indents
   // that line up under a name on the previous line — when a continuation
   // needs deeper indent, the previous line should be split so the rule
@@ -571,10 +571,10 @@ object AnchorRules:
   // Suspended when the line is inside an unclosed `(`, `[`, or `{` from an
   // earlier line (alignment there is governed by the bracket-interior rules
   // surrounding bracket structure), inside a multi-line import's selector
-  // list, on a lone `for`-filter row (governed by T3.3), and on the first
-  // body line of an indented scope (governed by A5).
+  // list, on a lone `for`-filter row (governed by ↯/c.7.3.3), and on the first
+  // body line of an indented scope (governed by ↯/c.2.5).
   object ContinuationIndent extends Rule:
-    def id: String = "A1"
+    def id: String = "c.2.1"
     def principle: Principle = Principle.Anchoring
 
     def check(ctx: Context): List[Violation] =
@@ -624,7 +624,7 @@ object AnchorRules:
             if line.leadingCols > maxAllowed then
               out +=
                 Violation
-                  ( ctx.file, lineNum, line.leadingCols + 1, "A1",
+                  ( ctx.file, lineNum, line.leadingCols + 1, "c.2.1",
                     s"indent ${line.leadingCols} cannot exceed previous line's indent " +
                       s"$prevCodeLineIndent by more than $step" )
 
@@ -646,7 +646,7 @@ object AnchorRules:
 
       out.toList
 
-  // A6: in a multi-line `def`/`given` signature, the body-introducing
+  // ↯/c.2.6: in a multi-line `def`/`given` signature, the body-introducing
   // top-level `=` must be the last code token on the final signature line.
   //
   // The trigger condition is lexical: the line has a top-level `=`, the
@@ -658,7 +658,7 @@ object AnchorRules:
   // by `val a = 1`) do not qualify: their head token is the member's own
   // keyword.
   object SignatureEqLast extends Rule:
-    def id: String = "A6"
+    def id: String = "c.2.6"
     def principle: Principle = Principle.Anchoring
 
     def check(ctx: Context): List[Violation] =
@@ -698,7 +698,7 @@ object AnchorRules:
             if emitCol >= 0 then
               out +=
                 Violation
-                  ( ctx.file, lineNum, emitCol, "A6",
+                  ( ctx.file, lineNum, emitCol, "c.2.6",
                     "the body-introducing `=` of a multi-line definition signature must " +
                       "be the last token on the signature's final line" )
 
@@ -706,7 +706,7 @@ object AnchorRules:
 
       out.toList
 
-  // A7: continuation lines of a multi-line `given` signature that
+  // ↯/c.2.7: continuation lines of a multi-line `given` signature that
   // begin with `=>` must align vertically with the leading modifier or
   // `given` keyword on the first line of the signature. The signature anchor
   // is tracked lexically: a line whose first semantic token (after any
@@ -714,7 +714,7 @@ object AnchorRules:
   // clears when the body opener (`=`) appears at top level, or when a line
   // that is neither an `=>` continuation nor part of the signature begins.
   object GivenArrowAlign extends Rule:
-    def id: String = "A7"
+    def id: String = "c.2.7"
     def principle: Principle = Principle.Anchoring
 
     def check(ctx: Context): List[Violation] =
@@ -735,7 +735,7 @@ object AnchorRules:
           then
             out +=
               Violation
-                ( ctx.file, lineNum, line.leadingCols + 1, "A7",
+                ( ctx.file, lineNum, line.leadingCols + 1, "c.2.7",
                   s"`=>` continuation of a `given` signature should align at column " +
                     s"${givenSignatureIndent + 1} (found ${line.leadingCols + 1})" )
 
@@ -770,7 +770,7 @@ object AnchorRules:
 
       i
 
-  // A8: a multi-line `m`/`j`/`x`/`y`/`tel` triple-quoted string is laid out as
+  // ↯/c.2.8: a multi-line `m`/`j`/`x`/`y`/`tel` triple-quoted string is laid out as
   // a block — the opening quotes end their line, the content is indented two
   // columns beyond the prefix, no content line is indented less than the first,
   // and the closing `"""` is alone on its line aligned with the prefix. A
@@ -778,13 +778,13 @@ object AnchorRules:
   // permitted (the surrounding application syntax), so "alone" means the string
   // content does not share the opener/closer line.
   object InterpolationLayout extends Rule:
-    def id: String = "A8"
+    def id: String = "c.2.8"
     def principle: Principle = Principle.Anchoring
 
     // Interpolators whose leading/trailing whitespace is insignificant, so a
-    // multi-line `"""…"""` may be laid out as a block (A8). Other interpolators
+    // multi-line `"""…"""` may be laid out as a block (↯/c.2.8). Other interpolators
     // (`t`, `s`, `sh`, …) and raw `"""` strings carry significant whitespace and
-    // are exempt — see the F4/F7 relaxation in `checkLine`.
+    // are exempt — see the ↯/c.1.4 and ↯/c.1.7 relaxation in `checkLine`.
     private val LayoutInterpolators: Set[String] = Set("m", "j", "x", "y", "tel")
 
     def check(ctx: Context): List[Violation] =
@@ -814,7 +814,7 @@ object AnchorRules:
           if !openerEndsLine then
             out +=
               Violation
-                ( file, info.openLine, afterOpen + 1, "A8.1",
+                ( file, info.openLine, afterOpen + 1, "c.2.8.1",
                   s"the content of a multi-line `${info.prefix}$q` string must begin on the " +
                     "line after the opening quotes" )
           else
@@ -830,7 +830,7 @@ object AnchorRules:
                 if fc < expected then
                   out +=
                     Violation
-                      ( file, ln, fc, "A8.3",
+                      ( file, ln, fc, "c.2.8.3",
                         s"a line of a multi-line `${info.prefix}$q` string must not be indented " +
                           s"less than the first content line (column $expected)" )
 
@@ -839,7 +839,7 @@ object AnchorRules:
             if first >= 0 && first != expected then
               out +=
                 Violation
-                  ( file, info.openLine + 1, first, "A8.2",
+                  ( file, info.openLine + 1, first, "c.2.8.2",
                     s"the content of a multi-line `${info.prefix}$q` string must be indented to " +
                       s"column $expected" )
 
@@ -855,7 +855,7 @@ object AnchorRules:
           if closeFirst != info.closeCol || info.closeCol != col || !trailingOk then
             out +=
               Violation
-                ( file, info.closeLine, (if closeFirst == 0 then 1 else closeFirst), "A8.4",
+                ( file, info.closeLine, (if closeFirst == 0 then 1 else closeFirst), "c.2.8.4",
                   s"the closing `$q` of a multi-line `${info.prefix}$q` string must be alone on " +
                     s"its line, aligned with the opening quotes (column $col)" )
 

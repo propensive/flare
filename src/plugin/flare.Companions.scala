@@ -43,7 +43,7 @@ case class CompanionDecls
 
 object Companions:
   // Collect (scope, name) -> first-line maps for type-like decls
-  // (class/trait/enum) and for objects. P2 asks that an object precede its
+  // (class/trait/enum) and for objects. ↯/c.6.2 asks that an object precede its
   // companion type — but a type and an object are companions only when they
   // share an *enclosing scope*. Keying by `(scope, name)`, where `scope` is
   // the span of the nearest enclosing definition (or -1 at the file root),
@@ -66,7 +66,7 @@ object Companions:
           case td: untpd.TypeDef =>
             // A `TypeDef` with a `Template` rhs is a class/trait/enum (or a
             // parameterised enum case); type aliases (`type X = Y`) have a
-            // non-Template rhs and are ignored for P2.
+            // non-Template rhs and are ignored for ↯/c.6.2.
             td.rhs match
               case _: untpd.Template =>
                 line(td).foreach: l =>

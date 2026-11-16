@@ -35,14 +35,14 @@ package flare
 import scala.collection.mutable
 
 // Per-file extraction of quote/splice layout sites for the frozen rule
-// family A9.1–A9.6 (see §5 "Macro quotes and splices" in
+// family ↯/c.2.9.1–↯/c.2.9.6 (see §5 "Macro quotes and splices" in
 // doc/consequent-style.md). A *multi-line* quote/splice is a `' {` or
 // `$ {` opener whose `{` is the last semantic token of its line, so the
 // matching `}` lives on a later line; an *inline* quote/splice opens and
 // closes on the same line.
 //
 // The extraction is deliberately lexical — the same whole-file brace scan
-// the original checker used — rather than tree-derived. Rule A9.4's
+// the original checker used — rather than tree-derived. Rule ↯/c.2.9.4's
 // "innermost open brace" semantics depend on every `{`, not only quote
 // braces, and the standalone parser mangles capture-checking syntax in a
 // few files, so `untpd.Quote`/`untpd.Splice` spans cannot reproduce the
@@ -77,7 +77,7 @@ object QuoteSites:
   // column of the matching opener's `{`; `semanticBefore` records whether
   // any semantic token precedes the `}` on its line; and `badAfter`
   // records whether anything other than enclosing `)` / `}` closers, an
-  // arrow, or a line-final symbolic infix operator (an C2 operator
+  // arrow, or a line-final symbolic infix operator (an ↯/c.4.2 operator
   // continuation) follows it.
   case class Closer
     ( line:           Int,
@@ -102,7 +102,7 @@ object QuoteSites:
 
   // The innermost unclosed brace carried *into* a line, when it is a
   // multi-line quote/splice brace: the column of its `{` and the line the
-  // opener appeared on. Rule A9.4 checks such lines' indentation.
+  // opener appeared on. Rule ↯/c.2.9.4 checks such lines' indentation.
   case class BodyTop(braceCol: Int, openerLine: Int)
 
   case class Model(sites: List[Site], bodyTops: Map[Int, BodyTop])

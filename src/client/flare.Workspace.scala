@@ -76,8 +76,8 @@ import pyrocosm.Tool
 //       umbrella soundness
 //       module-root lib
 //       interpolator m
-//       omit L4
-//       strict F4
+//       omit c.8.4
+//       strict c.1.4
 //       severity warn
 //       gate Unsafe
 //         prefix unsafe
@@ -245,7 +245,14 @@ object Workspace:
       val options: List[Text] = pluginOptions(profile) + extra
       val parsed = flare.Config.parse(options.map(_.s).stdlib)
       val config: flare.Config = parsed(0)
-      val messages: scala.List[Text] = parsed(1).map: (error: String) => Text(error)
+      // Each error comes labelled with its variant of the plugin's `↯/f.21.3`, which the code
+      // of a profile the plugin cannot use, `↯/f.23.6`, carries.
+      val messages: scala.List[Text] =
+        parsed(1).map: (error: String) =>
+          val (code, length) = fulminate.Bolt.prefix(Text(error))
+          val bolt = pyrocosm.Bolts(FlareBolts.client, 6).carrying(code)
+          t"${bolt.label} ${Text(error.substring(length).nn)}"
+
       Plugin(config, List.from(messages))
 
   // A profile as the plugin sees it: its configuration, and what the options failed to say.
@@ -272,7 +279,9 @@ object Workspace:
     val project: Tool.Project = Flare.project(directory)
 
     project.file.lay(Outcome.Missing): file =>
-      val unreadable = Outcome.Invalid(file.encode, List(t"the file could not be read as TEL"))
+      val label = pyrocosm.Bolts(FlareBolts.client, 1, 2).label
+      val error = t"$label the file could not be read as TEL"
+      val unreadable = Outcome.Invalid(file.encode, List(error))
       parse(file).lay(unreadable): tel => read(file.encode, project.root.encode, tel)
 
   // The atoms of every child compound with this keyword, one per occurrence.
@@ -287,7 +296,12 @@ object Workspace:
 
   private def read(file: Text, root: Text, tel: Tel): Outcome =
     var errors: List[Text] = Nil
-    def fail(message: Text): Unit = errors = errors + List(message)
+
+    // A problem with the file, labelled as the `variant`th variant of `error` in `↯/f.23`: the
+    // errors are the file's own (1), a model's (2), an assessment rule's (3), a project rule's
+    // (4) and a profile's (5), each with a variant per message.
+    def fail(error: Int, variant: Int)(message: Text): Unit =
+      errors = errors + List(t"${pyrocosm.Bolts(FlareBolts.client, error, variant).label} $message")
 
     // A signed integer atom: `+2`, `-3`, `10`.
     def signed(text: Text): Optional[Int] =
@@ -296,20 +310,20 @@ object Workspace:
     val models: List[Model] =
       tel.fields(t"model").to[List].map: (node: Tel) =>
         val name = node.primaryAtom
-        if name == t"" then fail(t"a model has no name")
+        if name == t"" then fail(2, 1)(t"a model has no name")
 
         val provider = atoms(node, t"provider").head.or(t"anthropic")
 
         if provider != t"anthropic"
-        then fail(t"model `$name`: `$provider` is not a provider; only `anthropic` is")
+        then fail(2, 2)(t"model `$name`: `$provider` is not a provider; only `anthropic` is")
 
         val model = atoms(node, t"model").head.or(t"")
-        if model == t"" then fail(t"model `$name` names no model")
+        if model == t"" then fail(2, 3)(t"model `$name` names no model")
 
         val mode = atoms(node, t"mode").head.or(t"batches")
 
         if mode != t"batches" && mode != t"realtime"
-        then fail(t"model `$name`: `$mode` is not a mode; expected `batches` or `realtime`")
+        then fail(2, 4)(t"model `$name`: `$mode` is not a mode; expected `batches` or `realtime`")
 
         Model
           ( name, provider, model, atoms(node, t"credential").head.or(provider),
@@ -317,7 +331,7 @@ object Workspace:
 
     models.map(_.name).each: (name: Text) =>
       if models.filter(_.name == name).size > 1
-      then fail(t"model `$name` is defined more than once")
+      then fail(2, 5)(t"model `$name` is defined more than once")
 
     val assessments: List[Assessment] =
       tel.fields(t"rule").to[List].filter(_.field(t"assess").present).map: (node: Tel) =>
@@ -330,39 +344,39 @@ object Workspace:
 
         node.childCompounds.to[List].map(_.keyword).each: (keyword: Text) =>
           if !known.has(keyword) && !kinds.has(keyword) then
-            fail(t"rule `$name`: `$keyword` is not an assessment keyword")
+            fail(3, 1)(t"rule `$name`: `$keyword` is not an assessment keyword")
 
         val unit = atoms(node, t"assess").head.or(t"def")
 
         if unit != t"def"
-        then fail(t"rule `$name`: `assess $unit` is not supported; only `assess def` is")
+        then fail(3, 2)(t"rule `$name`: `assess $unit` is not supported; only `assess def` is")
 
         val model = atoms(node, t"model").head.or(t"")
 
-        if model == t"" then fail(t"rule `$name` names no model")
+        if model == t"" then fail(3, 3)(t"rule `$name` names no model")
         else if models.filter(_.name == model).nil
-        then fail(t"rule `$name` uses model `$model`, which is not defined")
+        then fail(3, 4)(t"rule `$name` uses model `$model`, which is not defined")
 
         val rubric = atoms(node, t"rubric").head.or(t"")
-        if rubric == t"" then fail(t"rule `$name` names no rubric")
+        if rubric == t"" then fail(3, 5)(t"rule `$name` names no rubric")
 
         val criteria: List[Criterion] =
           node.fields(t"criterion").to[List].bind: (c: Tel) =>
             c.atomTexts.to[List].filter(_ != t"") match
               case id :: weight :: rest =>
                 val score = signed(weight)
+                if score.absent then fail(3, 6)(t"rule `$name`: criterion `$id` has no weight")
                 score.lay(Nil: List[Criterion]): (w: Int) => List(Criterion(id, w, rest.join(t" ")))
-                . also { if score.absent then fail(t"rule `$name`: criterion `$id` has no weight") }
 
               case _ =>
-                fail(t"rule `$name`: a criterion needs an id and a weight")
+                fail(3, 7)(t"rule `$name`: a criterion needs an id and a weight")
                 Nil
 
         criteria.map(_.id).each: (id: Text) =>
           if criteria.filter(_.id == id).size > 1
-          then fail(t"rule `$name`: criterion `$id` is defined more than once")
+          then fail(3, 8)(t"rule `$name`: criterion `$id` is defined more than once")
 
-        if criteria.nil then fail(t"rule `$name` has no criteria")
+        if criteria.nil then fail(3, 9)(t"rule `$name` has no criteria")
 
         val bands: List[Band] =
           node.fields(t"band").to[List].bind: (b: Tel) =>
@@ -374,7 +388,8 @@ object Workspace:
 
         bands.stdlib.sliding(2).foreach:
           case scala.Seq(higher, lower) =>
-            if higher.threshold <= lower.threshold then fail(t"rule `$name`: bands must descend")
+            if higher.threshold <= lower.threshold
+            then fail(3, 10)(t"rule `$name`: bands must descend")
 
           case _ => ()
 
@@ -395,7 +410,7 @@ object Workspace:
                 signed(points).lay(Nil: List[Signal]): (p: Int) => List(Signal(kind, value, p))
 
               case _ =>
-                fail(t"rule `$name`: a signal needs a kind and its points")
+                fail(3, 11)(t"rule `$name`: a signal needs a kind and its points")
                 Nil
 
         val predicates: List[Predicate] =
@@ -420,7 +435,7 @@ object Workspace:
         node.childCompounds.to[List].map(_.keyword).each: (keyword: Text) =>
           if keyword != t"message" && keyword != t"severity" && !kinds.has(keyword) then
             val expected = kinds.join(t", ")
-            fail(t"rule `$name`: `$keyword` is not a predicate; expected one of $expected")
+            fail(4, 1)(t"rule `$name`: `$keyword` is not a predicate; expected one of $expected")
 
         val predicates: List[Predicate] =
           kinds.bind[List[Predicate], Predicate, List[Predicate]]: kind =>
@@ -428,11 +443,11 @@ object Workspace:
               val predicate = Predicate(kind, phrase(child))
 
               val problems = Predicates.validate(flare.Predicate(kind.s, predicate.target.s))
-              problems.foreach: (error: String) => fail(t"rule `$name`: ${error.tt}")
+              problems.foreach: (error: String) => fail(4, 2)(t"rule `$name`: ${error.tt}")
 
               predicate
 
-        if predicates.nil then fail(t"rule `$name` has no predicates")
+        if predicates.nil then fail(4, 3)(t"rule `$name` has no predicates")
 
         Rule
           ( name, predicates,
@@ -441,23 +456,24 @@ object Workspace:
 
     (rules.map(_.name) + assessments.map(_.name)).each: (name: Text) =>
       if (rules.filter(_.name == name).size + assessments.filter(_.name == name).size) > 1 then
-        fail(t"rule `$name` is defined more than once")
+        fail(4, 4)(t"rule `$name` is defined more than once")
 
     val profiles: List[Profile] =
       tel.fields(t"profile").to[List].map: (node: Tel) =>
         val name = node.primaryAtom
-        if name == t"" then fail(t"a profile has no name")
-        if reserved.has(name) then fail(t"`$name` is a subcommand, so it cannot name a profile")
+        if name == t"" then fail(5, 1)(t"a profile has no name")
+        if reserved.has(name)
+        then fail(5, 2)(t"`$name` is a subcommand, so it cannot name a profile")
 
         val sources = atoms(node, t"source")
-        if sources.nil then fail(t"profile `$name` names no sources")
+        if sources.nil then fail(5, 3)(t"profile `$name` names no sources")
 
         val style: Optional[Style] =
           node.field(t"style").let: (styleNode: Tel) =>
             val styleName = styleNode.primaryAtom
 
             if styleName != t"consequent"
-            then fail(t"profile `$name`: `$styleName` is not a style; only `consequent` is")
+            then fail(5, 4)(t"profile `$name`: `$styleName` is not a style; only `consequent` is")
 
             Style
               ( styleName,
@@ -478,7 +494,7 @@ object Workspace:
             val rule = e.primaryAtom
 
             if rules.filter(_.name == rule).nil
-            then fail(t"profile `$name` enforces `$rule`, which is not defined")
+            then fail(5, 5)(t"profile `$name` enforces `$rule`, which is not defined")
 
             Enforcement(rule, atoms(e, t"severity").head)
 
@@ -486,7 +502,7 @@ object Workspace:
 
         assessed.each: (rule: Text) =>
           if assessments.filter(_.name == rule).nil
-          then fail(t"profile `$name` assesses `$rule`, which is not an assessment rule")
+          then fail(5, 6)(t"profile `$name` assesses `$rule`, which is not an assessment rule")
 
         Profile
           ( name, sources, atoms(node, t"exclude"), atoms(node, t"language"),
@@ -494,9 +510,9 @@ object Workspace:
 
     profiles.map(_.name).each: (name: Text) =>
       if profiles.filter(_.name == name).size > 1
-      then fail(t"profile `$name` is defined more than once")
+      then fail(5, 7)(t"profile `$name` is defined more than once")
 
-    if profiles.nil then fail(t"no profile is defined")
+    if profiles.nil then fail(1, 3)(t"no profile is defined")
 
     if errors.nil then Outcome.Loaded(Config(file, root, rules, profiles, models, assessments))
     else Outcome.Invalid(file, errors)

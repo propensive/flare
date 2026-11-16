@@ -51,20 +51,6 @@ class FlarePhase(options: List[String]) extends PluginPhase:
   private val seen: mutable.Set[String] = mutable.Set.empty
   private var reportedOptions: Boolean = false
 
-  private val esc: Char = 27.toChar
-  private val bel: Char = 7.toChar
-  private val gray   = s"$esc[38;2;128;128;128m"
-  private val orange = s"$esc[38;2;255;165;0m"
-  private val cyan   = s"$esc[38;2;0;200;255m"
-  private val reset  = s"$esc[0m"
-
-  private def colourPrefix(rule: String, useColor: Boolean): String =
-    if useColor then
-      val rendered = rule.replace(".", s"$gray.$cyan")
-      s"$gray[$orange↯$cyan$rendered$gray]$reset "
-    else
-      s"[↯$rule] "
-
   // The `-language` features this compilation is running with. The standalone
   // parser used for sibling files must agree with the compiler's own parse, so
   // they are read from the live context rather than assumed — a plugin built
@@ -83,7 +69,8 @@ class FlarePhase(options: List[String]) extends PluginPhase:
     if !reportedOptions then
       reportedOptions = true
 
-      optionErrors.foreach: error => report.warning(s"[↯flare] $error")
+      // Each is labelled already with its variant of `↯/f.21.3`.
+      optionErrors.foreach: error => report.warning(error)
 
     if seen.add(path) then
       val text: String = String(source.content)
@@ -100,7 +87,7 @@ class FlarePhase(options: List[String]) extends PluginPhase:
 
       result.violations.foreach: (violation, severity) =>
         val pos   = position(source, violation.line, violation.column)
-        val msg   = colourPrefix(violation.rule, useColor)+violation.message
+        val msg   = FlareBolts.prefix(violation.rule, useColor)+violation.message
         val fatal = severity == Linter.Severity.Error
 
         // Rendering a diagnostic at `pos` exercises the compiler's own message

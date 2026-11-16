@@ -287,7 +287,8 @@ object Assessing:
                     (d, judgement(rule, model, rubric, criteria, measured, candidate, d, verdict))
 
               case error: Llm.Error =>
-                progress(t"a batch failed: ${error.message}")
+                val label = pyrocosm.Bolts(FlareBolts.client, 12).carrying(error.bolt).label
+                progress(t"$label a batch failed: ${error.message}")
                 Nil
 
     val recordedJudgements: Boolean =

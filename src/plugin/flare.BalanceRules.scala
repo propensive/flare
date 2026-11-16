@@ -35,7 +35,7 @@ package flare
 import scala.collection.mutable
 
 object BalanceRules:
-  // B4: a formal multi-line block pads its interior — a space is
+  // ↯/c.5.4: a formal multi-line block pads its interior — a space is
   // required directly inside both the opener and the closer — and its
   // closing bracket shares a line with the last parameter rather than
   // standing alone. A formal pair that opens and closes on one line
@@ -44,7 +44,7 @@ object BalanceRules:
   // leading edge on the closing line. The pair inventory and formality
   // classification come from `ctx.brackets` (see `flare.Brackets`).
   object FormalBlockSpacing extends Rule:
-    def id: String = "B4"
+    def id: String = "c.5.4"
     def principle: Principle = Principle.Balance
 
     def check(ctx: Context): List[Violation] =
@@ -71,13 +71,13 @@ object BalanceRules:
         if arr(pair.openIdx + 1).kind != Sort.Space then
           out +=
             Violation
-              ( ctx.file, pair.openLine, cols(pair.openIdx + 1), "B4",
+              ( ctx.file, pair.openLine, cols(pair.openIdx + 1), "c.5.4",
                 s"a space is required after `${arr(pair.openIdx).text}` in a multi-line block" )
 
         if arr(pair.closeIdx - 1).kind != Sort.Space then
           out +=
             Violation
-              ( ctx.file, pair.openLine, cols(pair.closeIdx), "B4",
+              ( ctx.file, pair.openLine, cols(pair.closeIdx), "c.5.4",
                 s"a space is required before `${arr(pair.closeIdx).text}` in a " +
                   "multi-line block" )
 
@@ -92,7 +92,7 @@ object BalanceRules:
       if pair.openIdx + 1 >= arr.length || arr(pair.openIdx + 1).kind != Sort.Space then
         out +=
           Violation
-            ( ctx.file, pair.openLine, cols(pair.openIdx + 1), "B4",
+            ( ctx.file, pair.openLine, cols(pair.openIdx + 1), "c.5.4",
               s"a space is required after `${arr(pair.openIdx).text}` in a multi-line block" )
 
     private def checkCloser
@@ -109,21 +109,21 @@ object BalanceRules:
       if pair.closeIdx == firstSemantic then
         out +=
           Violation
-            ( ctx.file, pair.closeLine, cols(pair.closeIdx), "B4",
+            ( ctx.file, pair.closeLine, cols(pair.closeIdx), "c.5.4",
               s"`$text` cannot appear alone on its line; the closing bracket of a " +
                 "multi-line block goes on the same line as the last parameter" )
       else if pair.closeIdx > 0 && arr(pair.closeIdx - 1).kind != Sort.Space then
         out +=
           Violation
-            ( ctx.file, pair.closeLine, cols(pair.closeIdx), "B4",
+            ( ctx.file, pair.closeLine, cols(pair.closeIdx), "c.5.4",
               s"a space is required before `$text` in a multi-line block" )
 
-  // B5: a compact single-line bracket pair — one that is not a
+  // ↯/c.5.5: a compact single-line bracket pair — one that is not a
   // formal block — must not pad its interior with spaces. Tuples on a
   // fresh line after `=>` (lambda and match-case body tuples) are
   // exempt: the author may use either tight or formal-style spacing.
   object CompactBracketSpacing extends Rule:
-    def id: String = "B5"
+    def id: String = "c.5.5"
     def principle: Principle = Principle.Balance
 
     def check(ctx: Context): List[Violation] =
@@ -143,7 +143,7 @@ object BalanceRules:
           if firstInside.kind == Sort.Space && firstInside.text.length > 0 then
             out +=
               Violation
-                ( ctx.file, pair.openLine, cols(pair.openIdx + 1), "B5",
+                ( ctx.file, pair.openLine, cols(pair.openIdx + 1), "c.5.5",
                   s"no space is permitted directly after `${arr(pair.openIdx).text}`" )
 
           if lastInside.kind == Sort.Space && lastInside.text.length > 0 &&
@@ -151,12 +151,12 @@ object BalanceRules:
           then
             out +=
               Violation
-                ( ctx.file, pair.openLine, cols(pair.closeIdx - 1), "B5",
+                ( ctx.file, pair.openLine, cols(pair.closeIdx - 1), "c.5.5",
                   s"no space is permitted directly before `${arr(pair.closeIdx).text}`" )
 
       out.toList
 
-  // B1: binary-operator spacing. Within each **frame** — a bracket
+  // ↯/c.5.1: binary-operator spacing. Within each **frame** — a bracket
   // level, further cut at every comma, control-flow keyword and `=>` —
   // an operator's spacing must be symmetric, multi-character operators
   // must be spaced, same-precedence operators must agree with each
@@ -164,7 +164,7 @@ object BalanceRules:
   // Frames are strictly per-line: an opener carried across a line break
   // starts afresh, exactly as the old per-line walk did.
   object OperatorSpacing extends Rule:
-    def id: String = "B1"
+    def id: String = "c.5.1"
     def principle: Principle = Principle.Balance
 
     private val CheckedOps: Set[String] =
@@ -274,7 +274,7 @@ object BalanceRules:
       val cols = line.cols
 
       def emit(col: Int, message: String): Unit =
-        out += Violation(ctx.file, lineNum, col, "B1", message)
+        out += Violation(ctx.file, lineNum, col, "c.5.1", message)
 
       val firstSemantic = arr.indexWhere: t => !skippable(t)
       val lastSemantic  = arr.lastIndexWhere: t => !skippable(t)
@@ -374,7 +374,7 @@ object BalanceRules:
                   s"`${op.text}` cannot have more spacing than lower-precedence " +
                     "operators in the same expression" )
 
-  // B2: assignment and mutation operators (`=`, `+=`, `-=`, etc.)
+  // ↯/c.5.2: assignment and mutation operators (`=`, `+=`, `-=`, etc.)
   // require *at least* one space before and *exactly* one space after
   // when the right-hand side appears on the same line. The "at least one
   // before" lets multi-line parameter blocks align their `=`s
@@ -388,7 +388,7 @@ object BalanceRules:
   // by literal text. The check skips when the operator is the last
   // semantic token on its line (multi-line RHS — `def f =\n  body`).
   object AssignmentSpacing extends Rule:
-    def id: String = "B2"
+    def id: String = "c.5.2"
     def principle: Principle = Principle.Balance
 
     private val AssignOps: Set[String] =
@@ -429,13 +429,13 @@ object BalanceRules:
               if !leftHasSpace then
                 out +=
                   Violation
-                    ( ctx.file, lineNum, cols(i), "B2",
+                    ( ctx.file, lineNum, cols(i), "c.5.2",
                       s"`${t.text}` requires at least one space before it when " +
                         "the right-hand side is on the same line" )
               else if !rightExactSpace then
                 out +=
                   Violation
-                    ( ctx.file, lineNum, cols(i), "B2",
+                    ( ctx.file, lineNum, cols(i), "c.5.2",
                       s"`${t.text}` requires exactly one space after it when " +
                         "the right-hand side is on the same line" )
 
@@ -445,11 +445,11 @@ object BalanceRules:
 
       out.toList
 
-  // B3: a symbolic method name (`def +`, `def <=`, …) must be
+  // ↯/c.5.3: a symbolic method name (`def +`, `def <=`, …) must be
   // separated from a directly-following `(` or `[` by a single space —
   // otherwise the opener reads as part of the operator glyph.
   object SymbolicMethodNames extends Rule:
-    def id: String = "B3"
+    def id: String = "c.5.3"
     def principle: Principle = Principle.Balance
 
     def check(ctx: Context): List[Violation] =
@@ -481,7 +481,7 @@ object BalanceRules:
               then
                 out +=
                   Violation
-                    ( ctx.file, lineNum, cols(nextIdx), "B3",
+                    ( ctx.file, lineNum, cols(nextIdx), "c.5.3",
                       s"a single space is required between `${arr(opIdx).text}` and " +
                         s"`${arr(nextIdx).text}`" )
 

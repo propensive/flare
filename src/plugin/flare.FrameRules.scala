@@ -36,12 +36,12 @@ import scala.collection.mutable
 
 object FrameRules:
   
-  // F4: hard limit of `columns` columns. Interior lines of multi-line
+  // ↯/c.1.4: hard limit of `columns` columns. Interior lines of multi-line
   // triple-quoted strings are exempt: their text is string content, whose
-  // width is governed by A8 for the layout interpolators and is
+  // width is governed by ↯/c.2.8 for the layout interpolators and is
   // significant data for the rest.
   object LineLength extends Rule:
-    def id: String = "F4"
+    def id: String = "c.1.4"
     def principle: Principle = Principle.Frame
 
     def check(ctx: Context): List[Violation] =
@@ -57,7 +57,7 @@ object FrameRules:
         if !isStringContinuation && line.visibleLen > ctx.config.columns then
           out +=
             Violation
-              ( ctx.file, idx + 1, ctx.config.columns + 1, "F4",
+              ( ctx.file, idx + 1, ctx.config.columns + 1, "c.1.4",
                 s"line exceeds ${ctx.config.columns} columns " +
                   s"(is ${line.visibleLen} columns)" )
 
@@ -65,13 +65,13 @@ object FrameRules:
 
       out.toList
 
-  // F5: no tab characters anywhere in the file. This is a raw
+  // ↯/c.1.5: no tab characters anywhere in the file. This is a raw
   // pre-tokenizer scan: it walks `ctx.text` verbatim, character by
   // character, exactly as the old preamble scan did before tokenization —
   // so it also reaches tabs inside strings and comments, which the
   // tokenized `ctx.lines` view would classify differently.
   object RawTabs extends Rule:
-    def id: String = "F5"
+    def id: String = "c.1.5"
     def principle: Principle = Principle.Frame
 
     def check(ctx: Context): List[Violation] =
@@ -85,7 +85,8 @@ object FrameRules:
         val ch = text.charAt(i)
 
         if ch == '\t' then
-          out += Violation(ctx.file, line, col, "F5", "tab character is not permitted; use spaces")
+          val message = "tab character is not permitted; use spaces"
+          out += Violation(ctx.file, line, col, "c.1.5", message)
 
         if ch == '\n' then
           line += 1
@@ -97,7 +98,7 @@ object FrameRules:
 
       out.toList
 
-  // F6: the leading indent of every code line must be an even
+  // ↯/c.1.6: the leading indent of every code line must be an even
   // number of columns. The rule suspends inside open `(...)` blocks:
   // continuation rows inside parameter lists align under names from the
   // opener line and may need an odd number of leading spaces (e.g. under
@@ -107,7 +108,7 @@ object FrameRules:
   // (never `[`/`]`) and clamped its depth at zero at the end of every
   // line, neither of which the bracket-pair table reproduces.
   object IndentWidth extends Rule:
-    def id: String = "F6"
+    def id: String = "c.1.6"
     def principle: Principle = Principle.Frame
 
     def check(ctx: Context): List[Violation] =
@@ -122,7 +123,7 @@ object FrameRules:
         if !isStringContent && openParens == 0 && !line.isBlank && line.leadingCols%2 != 0 then
           out +=
             Violation
-              ( ctx.file, idx + 1, 1, "F6",
+              ( ctx.file, idx + 1, 1, "c.1.6",
                 s"indent width ${line.leadingCols} is not a multiple of 2" )
 
         var depth = openParens
@@ -141,7 +142,7 @@ object FrameRules:
 
       out.toList
 
-  // F7: no trailing whitespace at the end of a line. Interior (and
+  // ↯/c.1.7: no trailing whitespace at the end of a line. Interior (and
   // closing) lines of multi-line triple-quoted strings are exempt: they
   // tokenize as a single `Strs` token with no leading `Space`, and their
   // text is string content — significant for `sh`/raw strings, prose for
@@ -149,7 +150,7 @@ object FrameRules:
   // Whitespace-only lines (no non-space, non-comment token) don't count
   // as trailing either.
   object TrailingWhitespace extends Rule:
-    def id: String = "F7"
+    def id: String = "c.1.7"
     def principle: Principle = Principle.Frame
 
     def check(ctx: Context): List[Violation] =
@@ -170,7 +171,7 @@ object FrameRules:
 
               if hasNonWs then
                 val col = line.lexemes.iterator.map(_.text.length).sum - token.text.length + 1
-                out += Violation(ctx.file, idx + 1, col, "F7", "line has trailing whitespace")
+                out += Violation(ctx.file, idx + 1, col, "c.1.7", "line has trailing whitespace")
 
             case _ =>
               ()
@@ -179,14 +180,14 @@ object FrameRules:
 
       out.toList
 
-  // F8: block comments. `/** ... */` doc comments are never permitted
-  // (F8.2 — documentation lives in `doc/` markdown), and `/* ... */`
+  // ↯/c.1.8: block comments. `/** ... */` doc comments are never permitted
+  // (↯/c.1.8.2 — documentation lives in `doc/` markdown), and `/* ... */`
   // block comments are reserved for the license header on lines 1–32
-  // (F8.1). The rule spans the Frame, Proximity and Locatability
+  // (↯/c.1.8.1). The rule spans the Frame, Proximity and Locatability
   // principles; it lives here with the Frame family because its licence
   // exemption is defined by the same fixed frame `LicenceFrame` enforces.
   object CommentShape extends Rule:
-    def id: String = "F8"
+    def id: String = "c.1.8"
     def principle: Principle = Principle.Frame
 
     def check(ctx: Context): List[Violation] =
@@ -208,12 +209,12 @@ object FrameRules:
             if text.startsWith("/**") then
               out +=
                 Violation
-                  ( ctx.file, lineNum, cols(i), "F8.2",
+                  ( ctx.file, lineNum, cols(i), "c.1.8.2",
                     "`/** ... */` block comments are not permitted; use `doc/` markdown instead" )
             else if text.startsWith("/*") && !inLicense && ctx.config.framed then
               out +=
                 Violation
-                  ( ctx.file, lineNum, cols(i), "F8.1",
+                  ( ctx.file, lineNum, cols(i), "c.1.8.1",
                     "`/* ... */` block comments are reserved for the license header " +
                       s"(lines 1-${ctx.config.headerLines})" )
 
@@ -223,9 +224,9 @@ object FrameRules:
 
       out.toList
 
-  // F1: the licence header — the text of the project's header file — occupies
+  // ↯/c.1.1: the licence header — the text of the project's header file — occupies
   // the first `header.length` lines of every file, verbatim. A project that
-  // sets no header has no F1. One violation is enough: the first line that
+  // sets no header has no ↯/c.1.1. One violation is enough: the first line that
   // differs is where the author should look, and a header that is wrong on
   // one line is usually wrong on many.
   //
@@ -234,7 +235,7 @@ object FrameRules:
   // the padding after it may then differ in length too, so a run of spaces in
   // a template line matches any run of spaces.
   object LicenceFrame extends Rule:
-    def id: String = "F1"
+    def id: String = "c.1.1"
     def principle: Principle = Principle.Frame
 
     def check(ctx: Context): List[Violation] =
@@ -249,7 +250,7 @@ object FrameRules:
               if idx >= lines.length then "the file ends before the licence header does"
               else s"line $number must be the licence header's, `${expected.trim}`"
 
-            Violation(ctx.file, number, 1, "F1", reason)
+            Violation(ctx.file, number, 1, "c.1.1", reason)
 
     private val Placeholder = """\$\{[A-Za-z_][A-Za-z0-9_]*\}""".r
 
@@ -269,14 +270,14 @@ object FrameRules:
       fragment.split("  +", -1).nn.toList.map: part => java.util.regex.Pattern.quote(part).nn
         . mkString(" +")
 
-  // F2: validate the file's `package` declaration. The parsed package
+  // ↯/c.1.2: validate the file's `package` declaration. The parsed package
   // info distinguishes "no real declaration" (empty-package wrapper)
   // from a real `PackageDef`. Multi-segment paths (`a.b`), wrong line,
   // names that don't match `expectedModule`, names with invalid
   // characters (e.g. backticked identifiers), and extra statements on
-  // the same line are each rejected with rule "F2".
+  // the same line are each rejected with rule "c.1.2".
   object PackageDeclaration extends Rule:
-    def id: String = "F2"
+    def id: String = "c.1.2"
     def principle: Principle = Principle.Frame
 
     def check(ctx: Context): List[Violation] =
@@ -287,13 +288,13 @@ object FrameRules:
         case None =>
           out +=
             Violation
-              ( file, ctx.config.packageLine, 1, "F2",
+              ( file, ctx.config.packageLine, 1, "c.1.2",
                 s"line ${ctx.config.packageLine} must be `package <module>`" )
 
         case Some(p) if p.line != ctx.config.packageLine =>
           out +=
             Violation
-              ( file, p.line, 1, "F2",
+              ( file, p.line, 1, "c.1.2",
                 s"expected `package` declaration on line ${ctx.config.packageLine}, " +
                   s"found content on line ${p.line}" )
 
@@ -303,29 +304,29 @@ object FrameRules:
           if p.segments.length > 1 || !p.segments.head.matches("[A-Za-z_][A-Za-z0-9_]*") then
             out +=
               Violation
-                ( file, p.line, 1, "F2",
+                ( file, p.line, 1, "c.1.2",
                   s"package declaration must be a single identifier segment, not `$name`" )
           else
             ctx.expectedModule.foreach: expected =>
               if name != expected then
                 out +=
                   Violation
-                    ( file, p.line, 1, "F2",
+                    ( file, p.line, 1, "c.1.2",
                       s"package `$name` does not match expected module `$expected`" )
 
           if p.extraStatementOnSameLine then
             out +=
               Violation
-                ( file, p.line, 1, "F2",
+                ( file, p.line, 1, "c.1.2",
                   "package declaration must contain only `package <ident>` on line " +
                     s"${ctx.config.packageLine}" )
 
       out.toList
 
-  // F3: when the `package` declaration sits correctly on its line, the next
+  // ↯/c.1.3: when the `package` declaration sits correctly on its line, the next
   // line must be a single blank line separating it from what follows.
   object PackageBlank extends Rule:
-    def id: String = "F3"
+    def id: String = "c.1.3"
     def principle: Principle = Principle.Frame
 
     def check(ctx: Context): List[Violation] =
@@ -335,19 +336,19 @@ object FrameRules:
       if packagePlaced && ctx.lines.length >= blankLine && !ctx.lines(blankLine - 1).isBlank then
         List
           ( Violation
-              ( ctx.file, blankLine, 1, "F3",
+              ( ctx.file, blankLine, 1, "c.1.3",
                 s"line $blankLine must be a single blank line after `package`" ) )
       else
         Nil
 
-  // P5: a blank line must separate the import region from the
+  // ↯/c.6.5: a blank line must separate the import region from the
   // first declaration. The scan begins on line 35 (after the package
   // declaration and its blank line) and ends at the first line that is
   // neither blank nor part of an import; if that line directly abuts the
   // line above it, the separator is missing. Only applies when the file
   // has a correctly-placed package declaration and at least one import.
   object ImportSeparation extends Rule:
-    def id: String = "P5"
+    def id: String = "c.6.5"
     def principle: Principle = Principle.Proximity
 
     def check(ctx: Context): List[Violation] =
@@ -367,7 +368,7 @@ object FrameRules:
               result =
                 List
                   ( Violation
-                      ( ctx.file, lineNum, 1, "P5",
+                      ( ctx.file, lineNum, 1, "c.6.5",
                         "missing blank line between imports and first declaration" ) )
 
             done = true
@@ -376,13 +377,13 @@ object FrameRules:
 
         result
 
-  // L1.1/9.2/9.3: classify and order the parsed top-level imports. Multi-line
+  // ↯/c.8.1: classify and order the parsed top-level imports. Multi-line
   // imports (`import a.{\n  b,\n  c\n}`) span lines naturally via the tree,
   // and multi-import lines (`import a.b, c.d`) appear as multiple Import
   // nodes whose `startLine` collide — only the first import on each line
   // drives the group, the rest are treated as continuations.
   object ImportOrdering extends Rule:
-    def id: String = "L1"
+    def id: String = "c.8.1"
     def principle: Principle = Principle.Locatability
 
     def check(ctx: Context): List[Violation] =
@@ -406,7 +407,7 @@ object FrameRules:
         if imp.hasTopLevelAlias && group >= 5 then
           out +=
             Violation
-              ( file, imp.startLine, 1, "L1.1",
+              ( file, imp.startLine, 1, "c.8.1.1",
                 "top-level imports must not use aliases (`as` or `=>`); write the full path" )
 
         prevGroup match
@@ -424,26 +425,26 @@ object FrameRules:
             if !areSiblings && group < pg then
               out +=
                 Violation
-                  ( file, imp.startLine, 1, "L1.2",
+                  ( file, imp.startLine, 1, "c.8.1.2",
                     s"import group $group appears after group $pg" )
             else if !areSiblings && group > pg then
               if !blankBetween then
                 out +=
                   Violation
-                    ( file, imp.startLine, 1, "L1.3",
+                    ( file, imp.startLine, 1, "c.8.1.3",
                       "import groups must be separated by exactly one blank line" )
             else if group == pg then
               if blankBetween then
                 out +=
                   Violation
-                    ( file, imp.startLine, 1, "L1.3",
+                    ( file, imp.startLine, 1, "c.8.1.3",
                       "unexpected blank line within an import group" )
 
               prevName.foreach: pn =>
                 if imp.path < pn then
                   out +=
                     Violation
-                      ( file, imp.startLine, 1, "L1.2",
+                      ( file, imp.startLine, 1, "c.8.1.2",
                         s"import `${imp.path}` is out of alphabetical order (after `$pn`)" )
 
           case None => ()

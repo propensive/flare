@@ -39,7 +39,7 @@ import dotty.tools.dotc.util.SourceFile
 
 object Annotations:
   // Walk the tree collecting the END-lines of every annotation on a
-  // `MemberDef`'s modifier list. P6.2 forbids a blank line between such
+  // `MemberDef`'s modifier list. ↯/c.6.6.2 forbids a blank line between such
   // an annotation and the declaration it annotates; the checker uses
   // this set to flag any blank line whose predecessor closes an
   // annotation. Multi-line annotations like `@Foo(\n  arg\n)` correctly
@@ -57,7 +57,7 @@ object Annotations:
           // modifiers extend `span.start` *before* the point. We use the
           // point's line to mean "where the declaration itself begins":
           // any annotation ending on an earlier line is a candidate for
-          // P6.2, while annotations sharing a line with the declaration
+          // ↯/c.6.6.2, while annotations sharing a line with the declaration
           // (e.g. `@ident email: Text` in a parameter list) cannot have a
           // blank line between themselves and what they annotate.
           val declPoint = d.span.point.max(0).min(source.content.length - 1)
@@ -77,8 +77,8 @@ object Annotations:
 
     out.toSet
 
-  // Collect the simple names of every definition annotated `@unexported`. L4
-  // and L5 skip these: they are deliberately not re-exported into the
+  // Collect the simple names of every definition annotated `@unexported`. ↯/c.8.4
+  // and ↯/c.8.5 skip these: they are deliberately not re-exported into the
   // umbrella package (a name clash with another component, or a compile-time/
   // internal helper). The annotation is read by name only, so its optional
   // `reason` argument is ignored here.

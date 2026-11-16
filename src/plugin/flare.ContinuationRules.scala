@@ -35,10 +35,10 @@ package flare
 import scala.collection.mutable
 
 object ContinuationRules:
-  // C2: a symbolic infix operator whose operands wrap onto separate source
-  // lines must terminate the first line (C2.1), preceded by exactly one
-  // space (C2.3), and the continuation must be indented exactly two columns
-  // beyond the first line of the operator chain (C2.2). The bad shapes are
+  // ↯/c.4.2: a symbolic infix operator whose operands wrap onto separate source
+  // lines must terminate the first line (↯/c.4.2.1), preceded by exactly one
+  // space (↯/c.4.2.3), and the continuation must be indented exactly two columns
+  // beyond the first line of the operator chain (↯/c.4.2.2). The bad shapes are
   // the operator beginning the continuation line (`left\n  ++ right`), the
   // operator alone on its own line, any continuation indent other than +2,
   // and a trailing operator that abuts its left operand (`left++`) or
@@ -46,7 +46,7 @@ object ContinuationRules:
   // balanced by a single space on its left, even for operators written
   // tight (`a++b`) when they fit on one line.
   object OperatorContinuation extends Rule:
-    def id: String = "C2"
+    def id: String = "c.4.2"
     def principle: Principle = Principle.ContinuationMarking
 
     def check(ctx: Context): List[Violation] =
@@ -55,7 +55,7 @@ object ContinuationRules:
           if op.opLine != op.leftEndLine then
             List
               ( Violation
-                  ( ctx.file, op.opLine, op.opCol, "C2.1",
+                  ( ctx.file, op.opLine, op.opCol, "c.4.2.1",
                     "a multi-line infix operator must terminate the first line, not begin " +
                       "the continuation line" ) )
           else
@@ -64,7 +64,7 @@ object ContinuationRules:
               else
                 List
                   ( Violation
-                      ( ctx.file, op.opLine, op.opCol, "C2.3",
+                      ( ctx.file, op.opLine, op.opCol, "c.4.2.3",
                         "a trailing infix operator must be preceded by exactly one space, " +
                           "balancing the line break that follows it" ) )
 
@@ -72,7 +72,7 @@ object ContinuationRules:
               if op.rightCol - 1 != op.anchorIndent + 2 then
                 List
                   ( Violation
-                      ( ctx.file, op.rightLine, op.rightCol, "C2.2",
+                      ( ctx.file, op.rightLine, op.rightCol, "c.4.2.2",
                         s"a multi-line infix continuation must be indented " +
                           s"${op.anchorIndent + 2} columns (found ${op.rightCol - 1})" ) )
               else
@@ -97,13 +97,13 @@ object ContinuationRules:
 
       count
 
-  // C3: continuation markers are followed by a fixed "hard space". A line
+  // ↯/c.4.3: continuation markers are followed by a fixed "hard space". A line
   // whose first token is the `=>` continuation marker must separate it from
   // what follows by exactly two spaces; a heavy-signature return-type line —
   // one that begins with `:` and ends with the body-introducing `=` — must
   // follow the `:` with exactly three spaces.
   object HardSpace extends Rule:
-    def id: String = "C3"
+    def id: String = "c.4.3"
     def principle: Principle = Principle.ContinuationMarking
 
     def check(ctx: Context): List[Violation] =
@@ -124,7 +124,7 @@ object ContinuationRules:
               if next.kind != Sort.Space || next.text != "  " then
                 out +=
                   Violation
-                    ( ctx.file, lineNum, leadingCols + 3, "C3",
+                    ( ctx.file, lineNum, leadingCols + 3, "c.4.3",
                       "`=>` continuation line must be followed by exactly two spaces" )
 
           case Some(tok) if tok.text == ":" && lineEndsWithEqualsToken(rest) =>
@@ -134,7 +134,7 @@ object ContinuationRules:
               if next.kind != Sort.Space || next.text != "   " then
                 out +=
                   Violation
-                    ( ctx.file, lineNum, leadingCols + 2, "C3",
+                    ( ctx.file, lineNum, leadingCols + 2, "c.4.3",
                       "heavy-signature return type `:` must be followed by exactly three spaces" )
 
           case _ => ()
@@ -147,16 +147,16 @@ object ContinuationRules:
       val nonWs = rest.filter: t => t.kind != Sort.Space && t.kind != Sort.Comment
       nonWs.lastOption.exists(_.text == "=")
 
-  // C1: a `. method` chain continuation line relates to the previous code
+  // ↯/c.4.1: a `. method` chain continuation line relates to the previous code
   // line through blank separation. When the previous code line is *more*
   // indented, the continuation resumes an outer chain, so a blank line must
-  // separate them (C1.1); when the previous code line is at the *same*
-  // indent, the chain is unbroken, so no blank line is permitted (C1.2).
+  // separate them (↯/c.4.1.1); when the previous code line is at the *same*
+  // indent, the chain is unbroken, so no blank line is permitted (↯/c.4.1.2).
   // Comment-only, annotation-only and triple-quoted-string continuation
   // lines belong to what follows them and don't count as the previous code
   // line.
   object ChainContinuation extends Rule:
-    def id: String = "C1"
+    def id: String = "c.4.1"
     def principle: Principle = Principle.ContinuationMarking
 
     def check(ctx: Context): List[Violation] =
@@ -175,13 +175,13 @@ object ContinuationRules:
               if prevCodeLineIndent > line.leadingCols && !prevLineWasBlank then
                 out +=
                   Violation
-                    ( ctx.file, lineNum, line.leadingCols + 1, "C1.1",
+                    ( ctx.file, lineNum, line.leadingCols + 1, "c.4.1.1",
                       "blank line is required before `. method` continuation following a " +
                         "more-indented line" )
               else if prevCodeLineIndent == line.leadingCols && prevLineWasBlank then
                 out +=
                   Violation
-                    ( ctx.file, lineNum, line.leadingCols + 1, "C1.2",
+                    ( ctx.file, lineNum, line.leadingCols + 1, "c.4.1.2",
                       "no blank line is permitted before `. method` continuation at the " +
                         "same indent" )
 
