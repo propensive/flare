@@ -71,13 +71,13 @@ profile default
   style consequent                # the formatting standard, with its refinements beneath
     header etc/header.txt         # the licence header every file must begin with, verbatim
     columns 100
-    umbrella soundness            # the umbrella re-export package (enables L4 and L5)
+    umbrella soundness            # the umbrella re-export package (enables ↯/c.8.4 and ↯/c.8.5)
     module-root lib               # the segment below which each module has its own directory
     interpolator m                # interpolators whose interior whitespace is insignificant
-    omit L4                       # leave a rule out (or a whole principle: `omit S`)
-    strict F4                     # report a rule as an error
+    omit c.8.4                    # leave a rule out (or a whole principle: `omit c.9`)
+    strict c.1.4                  # report a rule as an error
     severity warn                 # the default severity of the style's rules: warn | error
-    gate Unsafe                   # S1: a `using` parameter of type Unsafe must pair with a
+    gate Unsafe                   # ↯/c.9.1: a `using` parameter of type Unsafe must pair with a
       prefix unsafe               # name beginning `unsafe`, and vice versa; repeatable
 
   enforce cast                    # a rule this profile checks
@@ -175,7 +175,7 @@ Violations are reported as warnings, or errors where the profile says so. The op
 the plugin's own: `;` separates a list's items (the compiler splits `-P` on commas before the
 plugin sees them) and `:` separates a value's fields — `header=<file>`, `columns=<n>`,
 `umbrella=<pkg>`, `moduleRoot=<segment>`, `language=a;b`, `interpolators=m;j`,
-`gate=Unsafe:unsafe`, `strict=F4;S`, `omit=L4`, `rule=cast:invokes:asInstanceOf`,
+`gate=Unsafe:unsafe`, `strict=c.1.4;c.9`, `omit=c.8.4`, `rule=cast:invokes:asInstanceOf`,
 `rule=cast:message:<text>`, `rule=cast:severity:error`, `enforce=cast` or `enforce=cast:error`,
 and `errors`.
 
