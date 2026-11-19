@@ -190,7 +190,10 @@ object settings:
 
   // probably-events carries `probably.Streamer`, the BinTEL event stream fume drives a suite
   // through; without it fume falls back to a legacy run that no longer exists in 0.65.0.
-  def testDeps(soundness: String) = Seq("probably-cli", "probably-events", "fulminate-core").map(component(soundness))
+  // galilei-jvm gives a test that needs a file on disk a `Scratch` loan to make it in.
+  def testDeps(soundness: String) =
+    Seq("probably-cli", "probably-events", "fulminate-core", "galilei-jvm")
+    . map(component(soundness))
 
 // The propensive libraries this build depends on, pinned in etc/refs (the format, the snapshot flow
 // and the shared scripts are documented in propensive/.github): each is a release `X.Y.Z`, or a
