@@ -212,9 +212,16 @@ object Tests extends Suite(m"Flare Tests"):
       . assert(_.length == 1)
 
       test(m"Plugin options are parsed"):
-        val file = java.nio.file.Files.createTempFile("header", ".txt").nn
-        java.nio.file.Files.write(file, "/*\n *\n */\n".getBytes("UTF-8").nn)
-        Config.parse(List("errors", s"header=$file", "columns=120", "umbrella=lib"))(0)
+        import galilei.*, serpentine.*, prepositional.*, aperture.*, ambience.*, anticipation.*
+        import contingency.*
+        import filesystemBackends.javaBaseFilesystem, systems.javaBaseSystem
+        import temporaryDirectories.systemTemporaryDirectory, strategies.throwUnsafely
+
+        // The header file is made in a scratch directory, which is deleted when the test ends.
+        temporaryDirectory[Path on Linux].open[Scratch](Read & Write): scratch ?=>
+          val file = java.nio.file.Path.of(scratch.stem.encode.s).nn.resolve("header.txt").nn
+          java.nio.file.Files.write(file, "/*\n *\n */\n".getBytes("UTF-8").nn)
+          Config.parse(List("errors", s"header=$file", "columns=120", "umbrella=lib"))(0)
 
       . assert: c => c.errors && c.headerLines == 3 && c.columns == 120 && c.packageLine == 4
 
