@@ -154,7 +154,7 @@ the plugin cannot use is a variant of `↯/f.21.3`; among them, `↯/f.21.3.9` r
 `strict` entry which still names a rule in the letter form of the identifiers before the codes
 (`L4 is now c.8.4`). The command's own failures — a configuration it cannot use, a source which
 does not parse, git notes it cannot read or write — are codes of `↯/f.23`; the record of what
-each means is `f.tel` in the bolt registry. `flare rules` lists the style's rules by code.
+each means is Pyrocosm's `bolt.tel`. `flare rules` lists the style's rules by code.
 
 ### The census and git notes
 

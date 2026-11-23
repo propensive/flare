@@ -34,10 +34,10 @@ package flare
 
 // The bolt codes of flare, which begin `↯/f`, as those of Pyrocosm and its other tools do
 // (`pyrocosm.Bolts`). Each module of flare is a subdivision, numbered after Pyrocosm's own and
-// those of the tools before it; the record of what every code means is `f.tel` in
-// propensive/bolt. The plugin is loaded into a compiler which has no Soundness, so here a code is
-// written as text without its `↯/` — `f.21.1/c.2.2.1` — and the client makes a `fulminate.Bolt`
-// of the same numbers.
+// those of the tools before it; the record of what every code means is `bolt.tel` in
+// propensive/pyrocosm. The plugin is loaded into a compiler which has no Soundness, so here a code
+// is written as text without its `↯/` — `f.21.1/c.2.2.1` — and the client makes a
+// `fulminate.Bolt` of the same numbers.
 object FlareBolts:
   final val plugin   = 21
   final val records  = 22
