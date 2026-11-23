@@ -11,8 +11,8 @@ out, from `↯/c.1`, The Frame, to `↯/c.9`, Soundness.
 Numbering within a principle follows the order of Part II of the standard. A
 number carries no meaning beyond identity, and is permanent: a rule keeps its
 code even if the section order changes, and a code is never given to another
-rule. The record of every code is `c.tel` in the
-[bolt](https://github.com/propensive/bolt) registry.
+rule. The record of every code is [`bolt.tel`](bolt.tel), which the
+index of [bolt](https://github.com/propensive/bolt) codes names.
 
 A checker reports a violation under a code of its own which carries the rule's:
 flare writes `[↯/f.21.1/c.2.2.1]`, its violation of a style rule, carrying the
